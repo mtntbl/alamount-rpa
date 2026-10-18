@@ -32,6 +32,9 @@ with open(SURUM_DOSYASI, "w", encoding="utf-8") as f:
 RPA_MODULLERI = (
     "RPA.Windows", "RPA.Desktop", "RPA.Browser.Selenium", "RPA.Browser.common", "RPA.Excel",
     "RPA.FileSystem", "RPA.PDF", "RPA.Tables", "RPA.core",
+    # bağlayıcılar: e-posta, Outlook/Exchange, SAP GUI, veritabanı, REST, FTP, Azure, Microsoft 365, Salesforce, Word
+    "RPA.Email", "RPA.Outlook", "RPA.SAP", "RPA.Database", "RPA.HTTP", "RPA.FTP", "RPA.Cloud.Azure", "RPA.MSGraph",
+    "RPA.Salesforce", "RPA.JSON", "RPA.Archive", "RPA.Word", "RPA.Crypto", "RPA.Calendar", "RPA.Notifier",
 )
 
 
@@ -46,7 +49,8 @@ def guvenli(fn, *a, **k):
 hidden = [
     "pca_analiz", "ayarlar", "belge_ocr", "ise_giris", "llm_katmani", "mcp_sunucu", "AlamountRPA",
     "ajan", "merkez_sunucu", "merkez_db", "merkez_panel", "merkez_istemci", "bildirim", "cron", "surecler",
-    "kuyruk_isleri", "marka", "merkez_mcp", "mcp_kopru",
+    "kuyruk_isleri", "marka", "merkez_mcp", "mcp_kopru", "AlamountGoruntu", "AlamountBaglayicilar",
+    "goruntu_araclari", "oturum", "PIL.ImageTk", "PIL._tkinter_finder",
     "robot.libraries.BuiltIn", "robot.libraries.OperatingSystem", "robot.libraries.Collections",
     "robot.libraries.Process", "robot.libraries.String", "robot.libraries.DateTime",
     "robot.libraries.Screenshot", "robot.libraries.XML",
@@ -60,12 +64,17 @@ hidden += guvenli(collect_submodules, "uiautomation")
 hidden += guvenli(collect_submodules, "comtypes")
 hidden += guvenli(collect_submodules, "mcp", filter=lambda n: not n.startswith("mcp.cli"))
 hidden += guvenli(collect_submodules, "anthropic")
+# görüntü otomasyonu (ekran görüntüsü, fare/klavye) ve bağlayıcıların bağımlılıkları
+for paket in ("mss", "pynput", "RequestsLibrary", "exchangelib", "O365", "simple_salesforce", "pyodbc", "psycopg2",
+              "oracledb", "pymysql"):
+    hidden += guvenli(collect_submodules, paket)
 for paket in ("uvicorn", "starlette", "anyio", "h11", "python_multipart", "multipart"):
     hidden += guvenli(collect_submodules, paket)
 
 datas = [("marka/logo.png", "marka"), ("marka/logo_koyu.png", "marka"), ("marka/favicon.png", "marka"),
          ("marka/simge.png", "marka"), ("marka/alamount.ico", "marka")]
-for paket in ("robot", "SeleniumLibrary", "selenium", "webdriver_manager", "RPA", "uiautomation", "certifi", "mcp"):
+for paket in ("robot", "SeleniumLibrary", "selenium", "webdriver_manager", "RPA", "uiautomation", "certifi", "mcp",
+              "exchangelib", "O365", "tzlocal", "oracledb"):
     datas += guvenli(collect_data_files, paket)
 binaries = []
 for paket in ("uiautomation", "cv2", "pymupdf"):
@@ -77,7 +86,7 @@ a = Analysis(
     binaries=binaries,
     datas=datas,
     hiddenimports=hidden,
-    excludes=["tkinter", "IPython", "jupyter", "notebook", "pytest"],
+    excludes=["IPython", "jupyter", "notebook", "pytest"],  # tkinter: şablon yakalama aracı ve demo kullanır
     noarchive=False,
 )
 pyz = PYZ(a.pure)

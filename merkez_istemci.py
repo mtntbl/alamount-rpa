@@ -83,8 +83,9 @@ class MerkezIstemci:
         raise son_hata
 
     # ------------------------------------------------------------------ API
-    def nabiz(self, makine, surum, calisan_is):
-        return self.istek("POST", "/api/nabiz", {"makine": makine, "surum": surum, "calisan_is": calisan_is}, deneme=1)
+    def nabiz(self, makine, surum, calisan_is, oturum=""):
+        return self.istek("POST", "/api/nabiz", {"makine": makine, "surum": surum, "calisan_is": calisan_is,
+                                                 "oturum": oturum}, deneme=1)
 
     def is_al(self):
         return self.istek("POST", "/api/is/al", {}, deneme=1)

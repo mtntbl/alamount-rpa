@@ -7,6 +7,7 @@ Robot ajanı — robot makinesinde sürekli çalışır:  AlamountRPA.exe ajan
   * İptal ve zaman aşımında süreç ağacını sonlandırır
   * Merkeze ulaşılamazsa bekler ve yeniden bağlanır; sonucu kaybetmez
 Masaüstü (Mikro, Not Defteri) görevleri için ajan, AÇIK BİR KULLANICI OTURUMUNDA çalışmalıdır.
+Gözetimsiz çalışma (oturumu robotun kendisinin açması) için: AlamountRPA.exe oturum-kur (bkz. oturum.py).
 """
 
 import logging
@@ -20,6 +21,7 @@ import sys
 import threading
 import time
 
+import oturum
 import surecler
 from merkez_istemci import MerkezHatasi, MerkezIstemci
 
@@ -62,15 +64,32 @@ class Ajan:
         self._dur = threading.Event()
         self._kilit = threading.Lock()
         self.cikis_kodu = 0
+        self.oturum_durumu = oturum.bu_oturum_durumu()
+        self.uyanik_tut = ayarlar.getbool("OTURUM", "uyanik_tut")
+        self.kilitliyken_is_al = ayarlar.getbool("OTURUM", "kilitliyken_is_al")
 
     # ------------------------------------------------------------------ nabız
+    def _oturumu_izle(self, mesgul):
+        """Oturum açık/kilitli bilgisini günceller; boştayken ekran kilidinin devreye girmesini önler."""
+        onceki, self.oturum_durumu = self.oturum_durumu, oturum.bu_oturum_durumu()
+        if onceki != self.oturum_durumu and self.oturum_durumu in ("kilitli", "acik", "servis"):
+            (log.warning if self.oturum_durumu != "acik" else log.info)(
+                "Windows oturumu: %s", {"kilitli": "KİLİTLİ — masaüstü görevleri çalışamaz", "acik": "açık",
+                                         "servis": "servis oturumu (masaüstü yok)"}[self.oturum_durumu])
+        if self.uyanik_tut and not mesgul and self.oturum_durumu == "acik" and oturum.bosta_sure_sn() > 50:
+            oturum.bosta_tusu_gonder()
+        oturum.ajan_durumunu_yaz(self.ayarlar, mesgul, self.oturum_durumu)
+
     def _nabiz_dongusu(self):
         bagli = None
+        if self.uyanik_tut:
+            oturum.uyanik_tut_baslat()
         while not self._dur.is_set():
             with self._kilit:
                 is_id = self.calisan["id"] if self.calisan else None
+            self._oturumu_izle(is_id is not None)
             try:
-                yanit = self.istemci.nabiz(self.makine, self.surum, is_id) or {}
+                yanit = self.istemci.nabiz(self.makine, self.surum, is_id, self.oturum_durumu) or {}
                 if bagli is not True:
                     log.info("Merkeze bağlanıldı: %s (robot %s)", self.istemci.url, self.istemci.robot_adi)
                 bagli = True
@@ -196,6 +215,9 @@ class Ajan:
         threading.Thread(target=self._nabiz_dongusu, daemon=True, name="nabiz").start()
         try:
             while not self._dur.is_set():
+                if not self.kilitliyken_is_al and self.oturum_durumu == "kilitli":
+                    self._dur.wait(5)  # oturum gözetmeni oturumu yeniden açana kadar iş alma
+                    continue
                 try:
                     j = self.istemci.is_al()
                 except MerkezHatasi as e:

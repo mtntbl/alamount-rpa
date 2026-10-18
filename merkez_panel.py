@@ -41,10 +41,10 @@ h2{font-size:16px;margin:24px 0 10px}
 th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--cizgi);vertical-align:top}
 th{font-size:12px;color:var(--soluk);font-weight:600;background:var(--gri-a)}tr:hover td{background:var(--gri-a)}
 .rozet{display:inline-block;padding:1px 8px;border-radius:10px;font-size:12px;font-weight:600;white-space:nowrap}
-.r-basarili,.r-cevrimici,.r-bosta{background:var(--yesil-a);color:var(--yesil)}
-.r-basarisiz,.r-cevrimdisi,.r-iptal{background:var(--kirmizi-a);color:var(--kirmizi)}
+.r-basarili,.r-cevrimici,.r-bosta,.r-oturum_acik{background:var(--yesil-a);color:var(--yesil)}
+.r-basarisiz,.r-cevrimdisi,.r-iptal,.r-oturum_kilitli{background:var(--kirmizi-a);color:var(--kirmizi)}
 .r-calisiyor,.r-isleniyor,.r-mesgul{background:var(--mavi-a);color:var(--mavi)}
-.r-bekliyor,.r-yeni,.r-yeniden{background:var(--sari-a);color:var(--sari)}.r-pasif,.r-bilinmiyor{background:var(--gri-a);color:var(--soluk)}
+.r-bekliyor,.r-yeni,.r-yeniden{background:var(--sari-a);color:var(--sari)}.r-pasif,.r-bilinmiyor,.r-oturum_servis{background:var(--gri-a);color:var(--soluk)}
 form.satir{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end}
 label{display:flex;flex-direction:column;font-size:12px;color:var(--soluk);gap:3px}
 input,select,textarea{font:inherit;padding:7px 9px;border:1px solid var(--cizgi);border-radius:6px;background:var(--kart);color:var(--yazi);min-width:0}
@@ -83,6 +83,7 @@ DURUM_ADI = {
     "bekliyor": "Bekliyor", "calisiyor": "Çalışıyor", "basarili": "Başarılı", "basarisiz": "Başarısız",
     "iptal": "İptal", "yeni": "Yeni", "isleniyor": "İşleniyor", "cevrimici": "Çevrimiçi",
     "cevrimdisi": "Çevrimdışı", "bosta": "Boşta", "mesgul": "Meşgul", "bilinmiyor": "Bilinmiyor", "pasif": "Pasif",
+    "oturum_acik": "Açık", "oturum_kilitli": "Kilitli", "oturum_servis": "Masaüstü yok",
 }
 
 

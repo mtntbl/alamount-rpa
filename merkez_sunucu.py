@@ -142,7 +142,8 @@ class Merkez:
     async def api_nabiz(self, request, robot):
         d = await request.json()
         iptal = self.db.nabiz(robot["ad"], str(d.get("makine", ""))[:100], str(d.get("surum", ""))[:30],
-                              "mesgul" if d.get("calisan_is") else "bosta", d.get("calisan_is"))
+                              "mesgul" if d.get("calisan_is") else "bosta", d.get("calisan_is"),
+                              str(d.get("oturum") or "")[:20])
         if self.db.cevrimici_oldu(robot["ad"]):
             self.bildirici.gonder("robot_cevrimici", f"{robot['ad']} yeniden bağlandı",
                                   {"Robot": robot["ad"], "Makine": d.get("makine", "")}, self.link("/robotlar"))
@@ -324,6 +325,12 @@ class Merkez:
 
     def cevrimdisi_esik(self):
         return time.time() - self.ayarlar.getint("MERKEZ", "cevrimdisi_esik_sn")
+
+    def _oturum_rozeti(self, r, esik):
+        if not r.get("oturum") or not r["son_gorulme"] or r["son_gorulme"] < esik:
+            return "—"
+        return P.rozet({"acik": "oturum_acik", "kilitli": "oturum_kilitli", "servis": "oturum_servis"}.get(
+            r["oturum"], r["oturum"]))
 
     def _robot_durum(self, r, esik):
         if not r["aktif"]:
@@ -583,15 +590,15 @@ class Merkez:
                 eylem += " " + P.dugme_form(f"/robotlar/{r['id']}/anahtar", "Yeni anahtar", k, "ikincil",
                                             "Eski anahtar geçersiz olacak. Devam edilsin mi?")
                 eylem += " " + P.dugme_form(f"/robotlar/{r['id']}/sil", "Sil", k, "ikincil", "Robot silinsin mi?")
-            satirlar.append([P.e(r["ad"]), P.rozet(self._robot_durum(r, esik)), P.e(r["makine"]), P.e(r["surum"]),
-                             P.zaman(r["son_gorulme"]), P.e(r["aciklama"]), eylem])
+            satirlar.append([P.e(r["ad"]), P.rozet(self._robot_durum(r, esik)), self._oturum_rozeti(r, esik),
+                             P.e(r["makine"]), P.e(r["surum"]), P.zaman(r["son_gorulme"]), P.e(r["aciklama"]), eylem])
         govde = ""
         if yeni_anahtar:
             ad, anahtar = yeni_anahtar
             url = self.panel_url or f"http://{socket.gethostname()}:{self.ayarlar.get('MERKEZ', 'port')}"
             govde += f"""<div class="uyari"><b>{P.e(ad)}</b> robotunun anahtarı aşağıdadır. <b>Bu anahtar yalnızca bir kez gösterilir.</b>
 Robot makinesindeki config.ini dosyasına yazın:<span class="anahtar">[AJAN]<br>merkez_url = {P.e(url)}<br>robot_adi = {P.e(ad)}<br>robot_anahtari = {P.e(anahtar)}</span></div>"""
-        govde += P.tablo(["Robot", "Durum", "Makine", "Sürüm", "Son görülme", "Açıklama", ""], satirlar,
+        govde += P.tablo(["Robot", "Durum", "Windows oturumu", "Makine", "Sürüm", "Son görülme", "Açıklama", ""], satirlar,
                          "Henüz robot yok")
         if P.yetkili(k, "yonetici"):
             govde += f"""<div class="kart" style="margin-top:16px"><h2 style="margin-top:0">Robot ekle</h2>

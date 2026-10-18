@@ -126,6 +126,23 @@ nabiz_sn = 15
 ; Merkez kendinden imzalı sertifika kullanıyorsa: ca_dosyasi = C:\\AlamountRPA\\merkez.crt
 ca_dosyasi =
 ssl_dogrula = evet
+
+[OTURUM]
+; Gözetimsiz robot: Windows oturumunu robot kendisi açar ve açık tutar.
+; Kurulum (yönetici komut isteminde):  AlamountRPA.exe oturum-kur --kullanici .\\robot1
+; mod: yok | autologon  (oturum-kur doldurur)
+mod = yok
+kullanici =
+; Parola merkezin kasasından alınsın; kasada değişince gözetmen otomatik günceller (ör. ROBOT1_WINDOWS)
+parola_varligi =
+; Robot oturumu kilitlenirse ve robot boştaysa oturumu kapatıp temiz bir oturumla yeniden açsın mı
+kilitliyken_yeniden_ac = evet
+; Kilitlenmeyi gördükten sonra kaç saniye beklensin
+kilit_bekleme_sn = 60
+; Oturum kilitliyken iş alınsın mı (masaüstü görevleri kilitli ekranda çalışamaz; oturum-kur 'hayir' yapar)
+kilitliyken_is_al = evet
+; Ajan boştayken bilgisayarı uyanık tutar, ekran koruyucu/kilidin devreye girmesini önler
+uyanik_tut = evet
 """
 
 TAM_CONFIG = pca_analiz.DEFAULT_CONFIG + EK_CONFIG
