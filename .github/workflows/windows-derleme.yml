@@ -90,6 +90,8 @@ jobs:
           $x = Get-ChildItem output\ise_giris -Recurse -Filter "*.xlsx"
           if ($x.Count -lt 2) { throw "Expected 2 onboarding Excel files" }
           Run robot, mikro_personel_giris, --variable, KURU_CALISMA:evet
+          Run robot, ornek_efatura_mutabakat
+          foreach ($x in "faturalar.xlsx", "mutabakat.xlsx") { if (-not (Test-Path "output\$x")) { throw "$x üretilmedi" } }
           foreach ($g in (Get-ChildItem gorevler\*.robot).BaseName) { Run robot, $g, --dryrun }
 
       - name: Smoke test - Notepad desktop automation (RPA.Windows)
@@ -106,6 +108,68 @@ jobs:
         run: |
           .\AlamountRPA.exe robot ornek_tarayici
           if ($LASTEXITCODE -ne 0) { throw "browser robot failed" }
+
+      - name: Smoke test - Citrix/RDP görüntü otomasyonu (şablon + OCR, UI Automation yok)
+        continue-on-error: true
+        working-directory: smoke
+        run: |
+          .\AlamountRPA.exe robot ornek_citrix_goruntu
+          if ($LASTEXITCODE -ne 0) { throw "görüntü otomasyonu robotu başarısız" }
+          Get-Content output\citrix_demo_sonuc.json
+
+      - name: Smoke test - TCMB canlı kur (dış servis)
+        continue-on-error: true
+        working-directory: smoke
+        run: |
+          @'
+          *** Settings ***
+          Library    AlamountBaglayicilar
+          *** Tasks ***
+          TCMB Kuru
+              ${usd}=    Kur Al    USD
+              Should Be True    ${usd} > 1
+              ${pazar}=    Kur Al    EUR    2026-10-18
+              Log    USD ${usd} / EUR (18.10.2026 → önceki iş günü) ${pazar}    console=True
+          '@ | Set-Content -Encoding utf8 gorevler\ci_tcmb.robot
+          .\AlamountRPA.exe robot ci_tcmb
+          if ($LASTEXITCODE -ne 0) { throw "TCMB kuru alınamadı" }
+
+      - name: Smoke test - gözetimsiz oturum (otomatik oturum açma, LSA, görevler, gözetmen)
+        working-directory: smoke
+        run: |
+          [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+          $p = "Ac1!" + [guid]::NewGuid().ToString("N").Substring(0, 10)   # net user: en fazla 14 karakter
+          net user ci_robot $p /add | Out-Null
+          if ($LASTEXITCODE -ne 0) { throw "Test kullanıcısı oluşturulamadı" }
+          function Durum { $o = (& .\AlamountRPA.exe oturum-durum) -join "`n"; $o; return $o }
+          # yanlış parola: hiçbir şey değişmemeli (runner imajında zaten runneradmin için autologon açık olabilir)
+          $wlYol = "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon"
+          $once = Get-ItemProperty $wlYol
+          $y = (& .\AlamountRPA.exe oturum-kur --kullanici .\ci_robot --parola yanlis-parola) -join "`n"
+          if ($LASTEXITCODE -eq 0 -or $y -notmatch 'parola yanlış') { throw "Yanlış parola reddedilmedi: $y" }
+          $sonra = Get-ItemProperty $wlYol
+          if ($sonra.DefaultUserName -ne $once.DefaultUserName -or $sonra.AutoAdminLogon -ne $once.AutoAdminLogon) { throw "Yanlış parolayla Winlogon değişti" }
+          & .\AlamountRPA.exe oturum-kur --kullanici .\ci_robot --parola $p
+          if ($LASTEXITCODE -ne 0) { throw "oturum-kur başarısız" }
+          $wl = Get-ItemProperty "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon"
+          if ($wl.AutoAdminLogon -ne "1" -or $wl.DefaultUserName -ne "ci_robot" -or $wl.ForceAutoLogon -ne "1") { throw "Winlogon ayarları hatalı" }
+          if ($wl.PSObject.Properties.Name -contains "DefaultPassword") { throw "Kayıt defterinde düz metin parola var" }
+          $d = Durum
+          foreach ($m in 'Otomatik oturum açma: AÇIK', 'LSA parola: True', 'Görev AlamountRPA_Ajan: var', 'Görev AlamountRPA_OturumGozetmeni: var') {
+            if ($d -notmatch [regex]::Escape($m)) { throw "oturum-durum: '$m' yok" }
+          }
+          $x = [xml](schtasks /Query /TN AlamountRPA_Ajan /XML | Out-String)
+          if ($x.Task.Principals.Principal.LogonType -ne "InteractiveToken" -or $x.Task.Triggers.LogonTrigger.UserId -notmatch 'ci_robot$|^S-1-5-21-') { throw "Ajan görevi hatalı: $($x.OuterXml)" }
+          if ((Get-Content config.ini -Raw) -notmatch '(?m)^mod = autologon') { throw "config [OTURUM] yazılmadı" }
+          & .\AlamountRPA.exe oturum-gozetmen --tek-sefer
+          if ($LASTEXITCODE -ne 0) { throw "gözetmen başarısız" }
+          if ((Get-Content logs\*.log | Out-String) -notmatch 'Robot oturumu yok') { throw "gözetmen kararı loglanmadı" }
+          & .\AlamountRPA.exe oturum-kaldir
+          $d = Durum
+          foreach ($m in 'Otomatik oturum açma: kapalı', 'LSA parola: False', 'Görev AlamountRPA_Ajan: YOK', 'Görev AlamountRPA_OturumGozetmeni: YOK') {
+            if ($d -notmatch [regex]::Escape($m)) { throw "oturum-kaldir sonrası: '$m' yok" }
+          }
+          net user ci_robot /delete | Out-Null
 
       - name: Smoke test - Kontrol Merkezi + robot ajanı (iki ayrı kurulum)
         run: |
@@ -149,6 +213,9 @@ jobs:
             $k = Invoke-WebRequest http://127.0.0.1:18765/kuyruklar/ise_giris -WebSession $s
             if (([regex]::Matches($k.Content, 'r-basarili')).Count -lt 2) { throw "Kuyruk öğeleri başarılı değil" }
             $isler = Invoke-WebRequest http://127.0.0.1:18765/isler -WebSession $s
+            $rb = Invoke-WebRequest http://127.0.0.1:18765/robotlar -WebSession $s
+            if ($rb.Content -notmatch 'Windows oturumu') { throw "Robotlar sayfasında oturum sütunu yok" }
+            "Robot Windows oturumu: " + (([regex]::Matches($rb.Content, 'r-oturum_[a-z]+">([^<]+)<') | ForEach-Object { $_.Groups[1].Value }) -join ", ")
             "Panelde $(([regex]::Matches($isler.Content, 'r-basarili')).Count) başarılı iş"
             # MCP — Copilot Studio yolu (X-API-Key, streamable HTTP)
             $mk = (& merkez\AlamountRPA.exe --config $m merkez-mcp-anahtar admin).Trim()
@@ -188,11 +255,12 @@ jobs:
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v3.2.0-build${{ github.run_number }}
-          name: Alamount RPA v3.2.0 (build ${{ github.run_number }})
+          tag_name: v3.3.0-build${{ github.run_number }}
+          name: Alamount RPA v3.3.0 (build ${{ github.run_number }})
           target_commitish: ${{ github.sha }}
           files: AlamountRPA_Windows.zip
           body: |
-            Alamount RPA – Windows paketi (Kontrol Merkezi + robot ajanı + PCA + OCR + işe giriş + Robot Framework + MCP).
+            Alamount RPA – Windows paketi (Kontrol Merkezi + robot ajanı + PCA + OCR + işe giriş + Robot Framework + MCP
+            + Citrix/RDP görüntü otomasyonu + e-Fatura/TCMB/MT940 bağlayıcıları + gözetimsiz oturum).
             `AlamountRPA_Windows.zip` dosyasını indirip çıkarın, `KULLANIM.md`'yi okuyun.
             Tesseract OCR (Türkçe dil paketiyle) paketin içindedir; ayrıca kurulum gerekmez.

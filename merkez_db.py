@@ -132,6 +132,9 @@ class Veritabani:
         self.kasa = Kasa(os.path.join(klasor, "kasa.key"))
         with self._baglan() as c:
             c.executescript(SEMA)
+            sutunlar = {r[1] for r in c.execute("PRAGMA table_info(robotlar)")}
+            if "oturum" not in sutunlar:  # v3.3: robotun Windows oturum durumu
+                c.execute("ALTER TABLE robotlar ADD COLUMN oturum TEXT DEFAULT ''")
 
     def _baglan(self):
         c = sqlite3.connect(self.yol, timeout=30, isolation_level=None, check_same_thread=False)
@@ -256,9 +259,9 @@ class Veritabani:
             return r
         return None
 
-    def nabiz(self, ad, makine, surum, durum, calisan_is):
-        self.yaz("""UPDATE robotlar SET son_gorulme=?, makine=?, surum=?, durum=?, calisan_is=?
-                    WHERE ad=?""", (simdi(), makine, surum, durum, calisan_is, ad))
+    def nabiz(self, ad, makine, surum, durum, calisan_is, oturum=None):
+        self.yaz("""UPDATE robotlar SET son_gorulme=?, makine=?, surum=?, durum=?, calisan_is=?,
+                    oturum=COALESCE(?, oturum) WHERE ad=?""", (simdi(), makine, surum, durum, calisan_is, oturum, ad))
         iptal = self.sorgu("SELECT id FROM isler WHERE robot=? AND durum='calisiyor' AND iptal_istendi=1", (ad,))
         return [r["id"] for r in iptal]
 

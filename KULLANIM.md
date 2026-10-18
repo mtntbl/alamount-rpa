@@ -8,6 +8,8 @@ Altı katmanlı bir robot. Hepsi tek pakette ve `AlamountRPA.exe` üzerinden ça
 |---|---|---|
 | Orkestrasyon | **Robot Framework** | `gorevler\*.robot` görevleri, log/rapor (`logs\robot\…\log.html`), tekrarlanabilirlik |
 | Masaüstü & tarayıcı | **rpaframework** | `RPA.Windows` (UI Automation), `RPA.Browser.Selenium`, `RPA.Excel`, `RPA.PDF` |
+| Citrix / RDP | **opencv · Tesseract** | UI Automation'ın göremediği ekranlarda görüntü ve yazı bularak tıklar, yazar (bölüm 4a) |
+| Bağlayıcılar | **rpaframework · AlamountBaglayicilar** | E-posta, Outlook/Exchange, SAP GUI, veritabanı, REST, Microsoft 365; e-Fatura, TCMB kuru, MT940 (bölüm 4b) |
 | Belge → görsel | **pymupdf · Pillow · opencv** | PDF sayfasını görsele çevirir; kimlik kartını bulup eğimini düzelterek kırpar |
 | OCR | **pytesseract + Tesseract** | Yerel (internetsiz) Türkçe metin okuma; taranmış sayfalar otomatik algılanır |
 | Veri & çıktı | **openpyxl · re** | Puantaj Excel'ini okur, TC ile eşleştirir, girişe hazır Excel yazar |
@@ -32,12 +34,13 @@ Hiçbir parçası Claude'a, internete ya da başka bir lisansa bağlı değildir
   5. Mikro ekran keşfi (locator çıkarma)
   6. Örnek: Not Defteri otomasyonu
   7. Örnek: Tarayıcı formu doldurma
-  8. Kurulum kontrolü
-  9. Kontrol Merkezi'ni başlat (sunucu makinesi)
- 10. Robot ajanını başlat (robot makinesi)
+  8. Örnek: Citrix/uzak masaüstü (görüntü + OCR)
+  9. Kurulum kontrolü
+ 10. Kontrol Merkezi'ni başlat (sunucu makinesi)
+ 11. Robot ajanını başlat (robot makinesi)
 ```
 
-3. İlk iş olarak **8 – Kurulum kontrolü**'nü çalıştırın. Tesseract, Türkçe dil paketi ve kütüphaneler `[OK]` görünmeli.
+3. İlk iş olarak **9 – Kurulum kontrolü**'nü çalıştırın. Tesseract, Türkçe dil paketi ve kütüphaneler `[OK]` görünmeli.
 4. Denemek için `ornek_veri\ise_giris\` içindeki dosyaları `input\ise_giris\` klasörüne kopyalayıp **2**'yi seçin.
    Bu dosyalar **kurgusal** test verisidir.
 
@@ -54,6 +57,10 @@ AlamountRPA.exe ocr D:\taranmis.pdf --cikti D:\metin.txt  taranmış PDF → met
 AlamountRPA.exe pca --once | --watch | --file D:\veri.txt PCA analizi
 AlamountRPA.exe robot <görev> [Robot seçenekleri]         ör. robot mikro_personel_giris --variable KURU_CALISMA:hayir
 AlamountRPA.exe gorevler                                  görev listesi
+AlamountRPA.exe goruntu-yakala AD                         Citrix/RDP: ekrandan şablon keser (bölüm 4a)
+AlamountRPA.exe goruntu-dene AD                           şablonu şu anki ekranda arar, eşleşme skorunu yazar
+AlamountRPA.exe oturum-kur --kullanici .\robot1           gözetimsiz robot: oturumu robot açar (bölüm 6, yönetici)
+AlamountRPA.exe oturum-durum | oturum-kaldir              gözetimsiz oturum durumu / geri alma
 AlamountRPA.exe mcp                                       MCP sunucusu (Claude Desktop için)
 AlamountRPA.exe merkez | ajan                             Kontrol Merkezi / robot ajanı (bölüm 6)
 AlamountRPA.exe kuyruk ise-giris-dagit | ise-giris-isle   merkez kuyruğuyla işe giriş
@@ -138,7 +145,94 @@ Her çalıştırmanın raporu `logs\robot\<görev>_<tarih>\log.html` dosyasında
 | `mikro_ekran_kesfi` | Mikro ekranındaki öğeleri listeler (haritayı doldurmak için) |
 | `ornek_masaustu_notepad` | RPA.Windows örneği: Not Defteri'ni aç, yaz, kaydet |
 | `ornek_tarayici` | RPA.Browser örneği: web formunu doldur, ekran görüntüsü al |
+| `ornek_citrix_goruntu` | Görüntü otomasyonu örneği: yalnızca piksellerden oluşan ekranda giriş yap (bölüm 4a) |
+| `ornek_efatura_mutabakat` | e-Fatura + MT940 ekstre mutabakatı, TCMB kuruyla TL karşılığı (bölüm 4b) |
 | `pca_analizi` | PCA analizi |
+
+## 4a) Citrix / RDP: görüntü tabanlı otomasyon
+
+Citrix, RDP, VDI ya da eski uygulamalarda ekran yalnızca bir resimdir; `RPA.Windows` içindeki öğeleri göremez.
+`AlamountGoruntu` kütüphanesi ekranı gerçek bir kullanıcı gibi görür:
+
+- **Şablon görüntüsü** (düğme, simge, alan) OpenCV ile aranır. %100, %125 ve %150 ekran ölçeklendirmesi ile
+  Citrix çözünürlük farkları otomatik denenir.
+- **Yazı**, Türkçe OCR ile aranır. Büyük/küçük harf, Türkçe karakter farkı ve küçük OCR hataları yok sayılır;
+  koyu temalı ekranlar da okunur.
+- Fare ve klavye gerçek kullanıcı gibi kullanılır (Türkçe karakterler dahil).
+- Aranan şey bulunamazsa ekran görüntüsü Robot raporuna eklenir. Hatayı görmek için ekrana bakmak yeter.
+
+**Şablon kesmek:** hedef ekranı açın ve `AlamountRPA.exe goruntu-yakala giris_dugmesi` çalıştırın.
+3 saniye sonra ekran donar; fareyle alanı seçin. Şablon `gorevler\goruntuler\giris_dugmesi.png` olarak kaydedilir.
+Aynı görüntü ekranda birden çok kez varsa araç uyarır. `goruntu-dene giris_dugmesi` şablonun o anda ekranda bulunup
+bulunmadığını ve eşleşme skorunu gösterir.
+
+```robotframework
+*** Settings ***
+Library    AlamountGoruntu
+Library    AlamountRPA
+
+*** Tasks ***
+Citrix Uygulamasına Giriş
+    ${parola}=    Varlık Al    CITRIX_GIRIS
+    Yazı Görünene Kadar Bekle    Kullanıcı adı    zaman_asimi=60
+    Yazıya Tıkla    Kullanıcı adı    y_kaydir=38          # etiketin altındaki kutu
+    Yaz    robot1
+    Tuşa Bas    tab
+    Yaz    ${parola}
+    Görüntüye Tıkla    giris_dugmesi
+    Görüntü Kaybolana Kadar Bekle    yukleniyor_simgesi
+    ${tutar}=    Ekrandaki Yazıyı Oku    bolge=820,310,200,40
+```
+
+| Anahtar kelime | Ne yapar |
+|---|---|
+| `Görüntüye Tıkla` / `Yazıya Tıkla` | Bulur ve tıklar; `tiklama=sağ/çift`, `x_kaydir`/`y_kaydir` ile yanındaki alana tıklar |
+| `Görüntüyü Bul` / `Yazıyı Bul` | Konumu döner (`x`, `y`, `sol`, `ust`, `genislik`, `yukseklik`, `skor`) |
+| `Görüntü Var Mı` / `Yazı Var Mı` / `Görüntü Sayısı` | Beklemeden kontrol eder |
+| `Görüntü Görünene Kadar Bekle` / `Yazı Görünene Kadar Bekle` / `Görüntü Kaybolana Kadar Bekle` | Ekran değişimini bekler |
+| `Ekrandaki Yazıyı Oku` | Ekrandaki (ya da bölgedeki) yazıyı satır satır döner |
+| `Yaz` / `Tuşa Bas` / `Koordinata Tıkla` / `Fareyi Götür` / `Ekran Görüntüsü Al` | Klavye, fare ve ekran görüntüsü |
+
+İpuçları:
+- Aramayı `bolge=x,y,genişlik,yükseklik` ile daraltın. OCR tüm ekranda 1–3 sn sürer, küçük bir bölgede çok daha hızlıdır.
+- Şablonu ayırt edici kesin: yalnızca düğmenin içini değil, üstündeki yazıyı da alın.
+- Yavaş uzak masaüstlerinde `Yaz    metin    aralik=0.05` kullanın.
+- Robot, uzak masaüstünü açık ve **kilitsiz** bir Windows oturumunda görmelidir. Gözetimsiz çalışma için bölüm 6'ya bakın.
+
+## 4b) Bağlayıcılar
+
+Genel bağlayıcılar pakette hazır gelir; `.robot` görevinde `Library` satırıyla kullanılır:
+
+| Kütüphane | Ne için |
+|---|---|
+| `RPA.Email.ImapSmtp` / `RPA.Email.Exchange` | Gelen kutusunu okuma, ek indirme, e-posta gönderme (IMAP/SMTP, Exchange/Office 365) |
+| `RPA.Outlook.Application` | Masaüstü Outlook'u kullanma |
+| `RPA.SAP` | SAP GUI otomasyonu (SAP GUI Scripting açık olmalı) |
+| `RPA.Database` | SQL Server (`pyodbc`), PostgreSQL (`psycopg2`), Oracle (`oracledb`), MySQL (`pymysql`) |
+| `RPA.HTTP` | REST/HTTP servisleri, dosya indirme |
+| `RPA.FTP` | FTP / FTPS |
+| `RPA.MSGraph` | Microsoft 365: OneDrive, SharePoint, Outlook (Graph API) |
+| `RPA.Salesforce` | Salesforce kayıtları |
+| `RPA.Word.Application` / `RPA.Excel.Application` | Masaüstü Word ve Excel (makro, formül, yazdırma) |
+| `RPA.Archive` / `RPA.JSON` / `RPA.Crypto` | ZIP, JSON, şifreleme |
+
+Türkiye'ye özel bağlayıcılar `AlamountBaglayicilar` kütüphanesindedir:
+
+| Anahtar kelime | Ne yapar |
+|---|---|
+| `E-Fatura Oku` / `E-Fatura Klasörünü Oku` | UBL-TR XML ya da entegratör ZIP'inden faturayı okur. Satıcı/alıcı VKN, vergi dairesi, satırlar, KDV, tevkifat, döviz ve kur alanlarını çıkarır. Satır toplamı ile KDV tutarsızlığını ve geçersiz VKN'yi uyarı olarak işaretler |
+| `E-Faturaları Excel'e Aktar` | "Faturalar" ve "Satırlar" sayfalı Excel; okunamayan dosyalar ayrı sayfada |
+| `TCMB Kurlarını Al` / `Kur Al` | TCMB gösterge kurları (döviz/efektif alış-satış). Geçmiş tarih verilebilir; hafta sonu ve tatilde önceki iş günü kullanılır |
+| `MT940 Ekstresini Oku` / `Ekstreyi Excel'e Aktar` | Banka ekstresi (MT940, UTF-8 ya da Windows-1254). Açılış + hareketler = kapanış kontrolü yapılır |
+| `Faturaları Ekstreyle Eşleştir` | Fatura–banka mutabakatı: önce açıklamadaki fatura numarası, sonra tutar. Sonuç: ödendi / eksik / fazla / ödenmedi, Excel raporu |
+| `Vergi Numarası Geçerli Mi` / `TC Kimlik Numarası Geçerli Mi` / `IBAN Geçerli Mi` | Kontrol hanesi doğrulaması |
+
+Örnek: `AlamountRPA.exe robot ornek_efatura_mutabakat` komutu `ornek_veri\efatura` ve `ornek_veri\banka` klasörlerindeki
+kurgusal dosyaları kullanır ve `output\mutabakat.xlsx` dosyasını yazar. Kendi dosyalarınız için:
+`--variable FATURA_KLASORU:D:\Faturalar --variable EKSTRE:D:\ekstre.sta`.
+
+> Logo, Netsis, Mikro gibi ERP'lere yazma; SGK ve e-Devlet akışları kuruma özel erişim (API kullanıcısı,
+> e-imza, test ortamı) gerektirir. Bunlar her kurulumda o kurumun sistemine göre görev olarak yazılır.
 
 ## 5) Ajan katmanı ve LLM entegrasyonu (opsiyonel)
 
@@ -216,9 +310,44 @@ Tek paket iki rolde çalışır. Rolü config.ini ve çalıştırılan komut bel
 1. Zip'i çıkarın.
 2. `config.ini` dosyasının `[AJAN]` bölümüne `merkez_url`, `robot_adi`, `robot_anahtari` yazın.
 3. Çok robotlu işe giriş için `[ISE_GIRIS]` ayarlarındaki `giris`, `puantaj`, `cikti` ile `[KLASORLER]` ayarlarındaki `arsiv`, `hata` değerlerini **ortak ağ klasörüne** yönlendirin (ör. `\\sunucu\ik\ise_giris`).
-4. Robotun çalışacağı Windows kullanıcısıyla oturum açıp `ajan_kur.bat` dosyasını çalıştırın. Ajan her oturum açılışında başlar.
-   Masaüstü otomasyonu (Mikro, Not Defteri) yalnızca **açık bir kullanıcı oturumunda** çalışır. Gözetimsiz robotlarda Windows otomatik oturum açmayı kullanın ve ekran kilidini kapatın.
-5. Panelde robot birkaç saniye içinde **Boşta** görünür.
+4. **Gözetimli robot** (bir kullanıcı bilgisayarın başında): o kullanıcıyla oturum açıp `ajan_kur.bat` dosyasını çalıştırın. Ajan her oturum açılışında başlar.
+   **Gözetimsiz robot** (kimse başında değil): aşağıdaki "Gözetimsiz robot" bölümüne bakın.
+5. Panelde robot birkaç saniye içinde **Boşta** görünür. **Robotlar** sayfasında robotun Windows oturumunun açık ya da kilitli olduğu da görünür.
+
+### Gözetimsiz robot (oturumu robot kendisi açar)
+
+Masaüstü otomasyonu (Mikro, Citrix, Not Defteri) yalnızca açık ve kilitsiz bir Windows oturumunda çalışır.
+Gözetimsiz bir robot makinesinde bunu Alamount RPA sağlar:
+
+1. Robot için bir Windows kullanıcısı açın (ör. `robot1`; etki alanı hesabı da olur). Parolayı isterseniz merkezin
+   kasasına varlık olarak kaydedin (ör. `ROBOT1_WINDOWS`).
+2. Robot makinesinde **yönetici** komut isteminde çalıştırın:
+   ```
+   AlamountRPA.exe oturum-kur --kullanici .\robot1
+   AlamountRPA.exe oturum-kur --kullanici ALAN\robot1 --parola-varligi ROBOT1_WINDOWS
+   ```
+   İlki parolayı sorar, ikincisi merkezin kasasından alır. Parola önce Windows'ta doğrulanır; yanlışsa hiçbir şey değişmez.
+3. Bilgisayarı yeniden başlatın. Windows robot kullanıcısıyla kendiliğinden oturum açar ve ajan başlar.
+
+Ne yapar:
+- **Otomatik oturum açma:** Parola Windows'un LSA gizli alanında şifreli saklanır; kayıt defterinde düz metin parola
+  yoktur (Sysinternals Autologon ile aynı yöntem). Oturum kapatılırsa Windows hemen yeniden giriş yapar.
+- **Oturum gözetmeni** (`AlamountRPA_OturumGozetmeni` görevi, SYSTEM olarak çalışır) 20 sn'de bir bakar:
+  - Biri robota RDP ile bağlanıp pencereyi kapattıysa, oturum kilitlenmeden fiziksel konsola geri bağlanır.
+  - Oturum kilitlendiyse ve robot o anda iş çalıştırmıyorsa, oturum kapatılır ve temiz bir oturumla yeniden açılır
+    (`kilitliyken_yeniden_ac = hayir` ile kapatılabilir).
+  - Parola kasadan geliyorsa 6 saatte bir kontrol edilir. Kasada değiştirdiğinizde robot makinesi kendini günceller.
+- **Ajan:** Robot kullanıcısının oturumunda başlar ve çökerse yeniden başlatılır. Boştayken bilgisayarı uyanık tutar,
+  ekran koruyucu ve kilit devreye girmez. Oturum kilitliyken iş almaz.
+- Uyku modunu (prizdeyken) kapatır.
+
+`AlamountRPA.exe oturum-durum` oturumları, otomatik oturum açma durumunu ve ajanı gösterir.
+`AlamountRPA.exe oturum-kaldir` hepsini geri alır ve parolayı LSA'dan siler.
+
+> Güvenlik: Robot kullanıcısına yalnızca işi için gereken yetkileri verin (yönetici yapmayın).
+> Makineye fiziksel erişimi kısıtlayın; otomatik oturum açılan bir makinede ekran başındaki kişi robotun oturumunu görür.
+> Bir Windows Server'da aynı anda birden çok robot oturumu (RDP ile) henüz desteklenmiyor; her robot için bir makine
+> ya da sanal makine kullanın.
 
 Kurulumu betikle yapmak isterseniz, merkez makinesinde şu komutları kullanabilirsiniz:
 `AlamountRPA.exe merkez-robot ROBOT-1` (anahtarı yazar), `AlamountRPA.exe merkez-is pca --robot ROBOT-1 --bekle 30`
@@ -272,8 +401,8 @@ Tipik zamanlama: `*/10 8-18 * * 1-5` ile dağıtıcı, `*/10 8-18 * * 1-5` ile h
 ### UiPath Orchestrator'a göre eksikler
 
 - Görsel süreç tasarımcısı ve kaydedici yok; süreçler `.robot` / Python ile yazılır.
-- Gözetimsiz robot için Windows oturumu kendiliğinden açılmaz. Otomatik oturum açma gerekir ya da robot için ayrılmış bir makine kullanılır.
-- Yüksek erişilebilirlik (çift merkez), Active Directory ile giriş ve Citrix/RDP için görüntü tabanlı otomasyon yok.
+- Bir sunucuda aynı anda birden çok gözetimsiz robot oturumu (RDP) yok; robot başına bir makine gerekir.
+- Yüksek erişilebilirlik (çift merkez) ve Active Directory / Entra ID ile tek oturum açma (SSO) yok.
 
 ## 7) PCA analizi
 

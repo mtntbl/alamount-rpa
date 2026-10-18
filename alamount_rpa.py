@@ -9,6 +9,8 @@ Alamount RPA — tek giriş noktası (AlamountRPA.exe)
   AlamountRPA.exe ocr belge.pdf [--cikti metin.txt]
   AlamountRPA.exe robot <görev> [robot seçenekleri]   (ör. robot mikro_personel_giris --variable KURU_CALISMA:hayir)
   AlamountRPA.exe gorevler                görev listesini yazar
+  AlamountRPA.exe goruntu-yakala AD       ekrandan şablon keser (Citrix/RDP görüntü otomasyonu)
+  AlamountRPA.exe goruntu-dene AD         şablonu şu anki ekranda arar
   AlamountRPA.exe kontrol                 kurulum kontrolü (Tesseract, dil paketleri, kütüphaneler)
   AlamountRPA.exe mcp                     yerel MCP sunucusu (bu bilgisayardaki araçlar)
   AlamountRPA.exe mcp --merkez URL        Claude Desktop ↔ Kontrol Merkezi köprüsü (ALAMOUNT_MCP_ANAHTARI)
@@ -18,6 +20,9 @@ Alamount RPA — tek giriş noktası (AlamountRPA.exe)
   AlamountRPA.exe merkez-robot ROBOT-1    robot ekler / anahtarını yeniler (merkez makinesinde)
   AlamountRPA.exe merkez-is pca [--robot R] [--degisken AD:deger] [--bekle 30]   iş başlatır
   AlamountRPA.exe ajan                    robot ajanı (merkezden iş alır)
+  AlamountRPA.exe oturum-kur --kullanici .\\robot1   gözetimsiz robot: Windows oturumunu robot açar (yönetici)
+  AlamountRPA.exe oturum-durum            oturumlar, otomatik oturum açma ve ajan durumu
+  AlamountRPA.exe oturum-kaldir           gözetimsiz oturum ayarlarını geri alır (yönetici)
   AlamountRPA.exe kuyruk ise-giris-dagit  PDF'leri merkez kuyruğuna ekler
   AlamountRPA.exe kuyruk ise-giris-isle   merkez kuyruğundan alıp işler
   AlamountRPA.exe init                    eksik config.ini ve klasörleri oluşturur
@@ -141,6 +146,22 @@ def kontrol(ayarlar):
             satir(True, ad)
         except Exception as e:
             satir(False, ad, str(e)[:80])
+    baglayicilar = ("RPA.Email.ImapSmtp", "RPA.Email.Exchange", "RPA.Outlook.Application", "RPA.SAP", "RPA.Database",
+                    "RPA.HTTP", "RPA.FTP", "RPA.MSGraph", "RPA.Salesforce", "AlamountBaglayicilar")
+    eksik = []
+    for mod in baglayicilar:
+        try:
+            __import__(mod)
+        except Exception as e:
+            eksik.append(f"{mod} ({str(e)[:60]})")
+    satir(not eksik, f"Bağlayıcılar {len(baglayicilar) - len(eksik)}/{len(baglayicilar)}", "; ".join(eksik))
+    try:
+        import AlamountGoruntu  # noqa: F401
+        import mss  # noqa: F401
+
+        satir(True, "Görüntü otomasyonu (Citrix/RDP)")
+    except Exception as e:
+        satir(False, "Görüntü otomasyonu", str(e)[:80])
     if sys.platform.startswith("win"):
         try:
             __import__("RPA.Windows")
@@ -157,6 +178,8 @@ def kontrol(ayarlar):
     llm = ayarlar.getbool("LLM", "aktif")
     anahtar = bool(ayarlar.get("LLM", "api_anahtari") or os.environ.get("ANTHROPIC_API_KEY"))
     print(f"  [--] LLM katmanı: {'AÇIK' if llm else 'kapalı'}" + (f", API anahtarı {'var' if anahtar else 'YOK'}" if llm else ""))
+    if ayarlar.get("OTURUM", "mod") not in ("", "yok"):
+        print(f"  [--] Gözetimsiz oturum: {ayarlar.get('OTURUM', 'mod')} ({ayarlar.get('OTURUM', 'kullanici')})")
     print(f"  Görevler: {', '.join(gorevleri_listele(ayarlar)) or '-'}")
     return 1 if sorun else 0
 
@@ -193,6 +216,7 @@ def menu(config_yolu):
         ("Mikro ekran keşfi (locator çıkarma)", ["robot", "mikro_ekran_kesfi"]),
         ("Örnek: Not Defteri otomasyonu", ["robot", "ornek_masaustu_notepad"]),
         ("Örnek: Tarayıcı formu doldurma", ["robot", "ornek_tarayici"]),
+        ("Örnek: Citrix/uzak masaüstü (görüntü + OCR)", ["robot", "ornek_citrix_goruntu"]),
         ("Kurulum kontrolü", ["kontrol"]),
         ("Kontrol Merkezi'ni başlat (sunucu makinesi)", ["merkez"]),
         ("Robot ajanını başlat (robot makinesi)", ["ajan"]),
@@ -234,6 +258,17 @@ def main(argv=None):
     p = alt.add_parser("robot", help="Robot Framework görevi çalıştır")
     p.add_argument("gorev")
     alt.add_parser("gorevler")
+    p = alt.add_parser("goruntu-yakala", help="Ekrandan şablon görüntüsü kes (gorevler\\goruntuler\\AD.png)")
+    p.add_argument("ad")
+    p.add_argument("--gecikme", type=int, default=3, help="hedef ekranı açmanız için beklenecek saniye")
+    p.add_argument("--klasor")
+    p = alt.add_parser("goruntu-dene", help="Şablonu şu anki ekranda ara")
+    p.add_argument("ad")
+    p.add_argument("--guven", type=float, default=0.85)
+    p.add_argument("--klasor")
+    p = alt.add_parser("goruntu-demo", help="Görüntü otomasyonu demo penceresi (örnek görev açar)")
+    p.add_argument("--cikti", required=True)
+    p.add_argument("--sure", type=int, default=120)
     alt.add_parser("kontrol")
     p = alt.add_parser("mcp", help="MCP sunucusu (yerel) ya da --merkez ile Kontrol Merkezi köprüsü")
     p.add_argument("--merkez", help="Kontrol Merkezi MCP adresi, ör. https://rpa-sunucu:8765/mcp (Claude Desktop köprüsü)")
@@ -254,6 +289,16 @@ def main(argv=None):
     p.add_argument("--deneme", type=int, default=1)
     p.add_argument("--bekle", type=float, default=0, help="dakika; iş bitene kadar bekler")
     alt.add_parser("ajan")
+    p = alt.add_parser("oturum-kur", help="Gözetimsiz robot: otomatik oturum açma + ajan + oturum gözetmeni")
+    p.add_argument("--kullanici", required=True, help=r"robot Windows kullanıcısı: .\robot1 ya da ALAN\robot1")
+    p.add_argument("--parola", help="verilmezse sorulur (önerilen) ya da --parola-varligi ile kasadan alınır")
+    p.add_argument("--parola-varligi", default="", help="merkez kasasındaki varlık adı (parola değişince güncellenir)")
+    p.add_argument("--yeniden-giris", choices=["evet", "hayir"], default="evet",
+                   help="oturum kapatılınca Windows robotla yeniden giriş yapsın")
+    alt.add_parser("oturum-durum")
+    alt.add_parser("oturum-kaldir")
+    p = alt.add_parser("oturum-gozetmen")
+    p.add_argument("--tek-sefer", action="store_true")
     p = alt.add_parser("kuyruk")
     p.add_argument("islem", choices=["ise-giris-dagit", "ise-giris-isle"])
     alt.add_parser("init")
@@ -321,6 +366,20 @@ def main(argv=None):
         import ajan
 
         return ajan.calistir(ayarlar, VERSION)
+    if args.komut.startswith("oturum-"):
+        import oturum
+
+        if args.komut == "oturum-durum":
+            return oturum.durum(ayarlar)
+        if args.komut == "oturum-kaldir":
+            return oturum.kaldir(ayarlar)
+        if args.komut == "oturum-gozetmen":
+            return oturum.gozetmen(ayarlar, args.tek_sefer)
+        try:
+            return oturum.kur(ayarlar, args.kullanici, args.parola, args.parola_varligi, args.yeniden_giris == "evet")
+        except ValueError as e:
+            print(f"HATA: {e}")
+            return 1
     # Ajanın başlattığı işler (ya da [AJAN] ayarlı makine): config'teki varlik:AD değerleri merkezden çözülür
     if os.environ.get("ALAMOUNT_MERKEZ_URL") or ayarlar.cp.get("AJAN", "merkez_url", fallback="").strip():
         import merkez_istemci
@@ -350,6 +409,14 @@ def main(argv=None):
         return 0
     if args.komut == "kontrol":
         return kontrol(ayarlar)
+    if args.komut in ("goruntu-yakala", "goruntu-dene", "goruntu-demo"):
+        import goruntu_araclari as ga
+
+        if args.komut == "goruntu-yakala":
+            return ga.yakala(ayarlar, args.ad, args.klasor, args.gecikme)
+        if args.komut == "goruntu-dene":
+            return ga.dene(ayarlar, args.ad, args.guven, args.klasor)
+        return ga.demo(ayarlar, args.cikti, args.sure)
     return 0
 
 

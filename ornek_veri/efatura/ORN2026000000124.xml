@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Invoice xmlns="urn:oasis:names:specification:ubl:schema:xsd:Invoice-2" xmlns:cac="urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2" xmlns:cbc="urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2">
+<cbc:UBLVersionID>2.1</cbc:UBLVersionID><cbc:CustomizationID>TR1.2</cbc:CustomizationID>
+<cbc:ProfileID>TEMELFATURA</cbc:ProfileID><cbc:ID>ORN2026000000124</cbc:ID>
+<cbc:UUID>680645f9-c381-5a40-a6e5-8b42dda2a22e</cbc:UUID>
+<cbc:IssueDate>2026-10-05</cbc:IssueDate><cbc:IssueTime>10:15:00</cbc:IssueTime>
+<cbc:InvoiceTypeCode>SATIS</cbc:InvoiceTypeCode>
+<cbc:Note>Örnek fatura — Alamount RPA test verisi</cbc:Note>
+<cbc:DocumentCurrencyCode>TRY</cbc:DocumentCurrencyCode><cbc:LineCountNumeric>2</cbc:LineCountNumeric>
+<cac:AccountingSupplierParty><cac:Party>
+  <cac:PartyIdentification><cbc:ID schemeID="VKN">7301942583</cbc:ID></cac:PartyIdentification>
+  <cac:PartyName><cbc:Name>Güneş Bilişim Hizmetleri A.Ş.</cbc:Name></cac:PartyName>
+  <cac:PostalAddress><cbc:CitySubdivisionName>Çankaya</cbc:CitySubdivisionName><cbc:CityName>Ankara</cbc:CityName>
+    <cac:Country><cbc:Name>Türkiye</cbc:Name></cac:Country></cac:PostalAddress>
+  <cac:PartyTaxScheme><cac:TaxScheme><cbc:Name>Çankaya</cbc:Name></cac:TaxScheme></cac:PartyTaxScheme>
+</cac:Party></cac:AccountingSupplierParty>
+<cac:AccountingCustomerParty><cac:Party>
+  <cac:PartyIdentification><cbc:ID schemeID="VKN">1234567890</cbc:ID></cac:PartyIdentification>
+  <cac:PartyName><cbc:Name>Alamount Teknoloji A.Ş.</cbc:Name></cac:PartyName>
+  <cac:PostalAddress><cbc:CitySubdivisionName>Ataşehir</cbc:CitySubdivisionName><cbc:CityName>İstanbul</cbc:CityName>
+    <cac:Country><cbc:Name>Türkiye</cbc:Name></cac:Country></cac:PostalAddress>
+  <cac:PartyTaxScheme><cac:TaxScheme><cbc:Name>Kozyatağı</cbc:Name></cac:TaxScheme></cac:PartyTaxScheme>
+</cac:Party></cac:AccountingCustomerParty>
+
+<cac:TaxTotal><cbc:TaxAmount currencyID="TRY">2950.00</cbc:TaxAmount><cac:TaxSubtotal>
+  <cbc:TaxableAmount currencyID="TRY">14750.00</cbc:TaxableAmount><cbc:TaxAmount currencyID="TRY">2950.00</cbc:TaxAmount>
+  <cbc:Percent>20</cbc:Percent><cac:TaxCategory><cac:TaxScheme><cbc:Name>KDV</cbc:Name>
+  <cbc:TaxTypeCode>0015</cbc:TaxTypeCode></cac:TaxScheme></cac:TaxCategory></cac:TaxSubtotal></cac:TaxTotal>
+<cac:LegalMonetaryTotal>
+  <cbc:LineExtensionAmount currencyID="TRY">14750.00</cbc:LineExtensionAmount>
+  <cbc:TaxExclusiveAmount currencyID="TRY">14750.00</cbc:TaxExclusiveAmount>
+  <cbc:TaxInclusiveAmount currencyID="TRY">17700.00</cbc:TaxInclusiveAmount>
+  <cbc:AllowanceTotalAmount currencyID="TRY">0.00</cbc:AllowanceTotalAmount>
+  <cbc:PayableAmount currencyID="TRY">17700.00</cbc:PayableAmount>
+</cac:LegalMonetaryTotal>
+<cac:InvoiceLine><cbc:ID>1</cbc:ID>
+  <cbc:InvoicedQuantity unitCode="C62">1</cbc:InvoicedQuantity>
+  <cbc:LineExtensionAmount currencyID="TRY">12500.00</cbc:LineExtensionAmount>
+  <cac:TaxTotal><cbc:TaxAmount currencyID="TRY">2500.00</cbc:TaxAmount><cac:TaxSubtotal>
+    <cbc:TaxableAmount currencyID="TRY">12500.00</cbc:TaxableAmount><cbc:TaxAmount currencyID="TRY">2500.00</cbc:TaxAmount>
+    <cbc:Percent>20</cbc:Percent><cac:TaxCategory><cac:TaxScheme><cbc:Name>KDV</cbc:Name>
+    <cbc:TaxTypeCode>0015</cbc:TaxTypeCode></cac:TaxScheme></cac:TaxCategory></cac:TaxSubtotal></cac:TaxTotal>
+  <cac:Item><cbc:Name>Sunucu Bakım Hizmeti (Ekim)</cbc:Name></cac:Item>
+  <cac:Price><cbc:PriceAmount currencyID="TRY">12500.00</cbc:PriceAmount></cac:Price>
+</cac:InvoiceLine><cac:InvoiceLine><cbc:ID>2</cbc:ID>
+  <cbc:InvoicedQuantity unitCode="C62">3</cbc:InvoicedQuantity>
+  <cbc:LineExtensionAmount currencyID="TRY">2250.00</cbc:LineExtensionAmount>
+  <cac:TaxTotal><cbc:TaxAmount currencyID="TRY">450.00</cbc:TaxAmount><cac:TaxSubtotal>
+    <cbc:TaxableAmount currencyID="TRY">2250.00</cbc:TaxableAmount><cbc:TaxAmount currencyID="TRY">450.00</cbc:TaxAmount>
+    <cbc:Percent>20</cbc:Percent><cac:TaxCategory><cac:TaxScheme><cbc:Name>KDV</cbc:Name>
+    <cbc:TaxTypeCode>0015</cbc:TaxTypeCode></cac:TaxScheme></cac:TaxCategory></cac:TaxSubtotal></cac:TaxTotal>
+  <cac:Item><cbc:Name>Yedekleme Lisansı</cbc:Name></cac:Item>
+  <cac:Price><cbc:PriceAmount currencyID="TRY">750.00</cbc:PriceAmount></cac:Price>
+</cac:InvoiceLine>
+</Invoice>

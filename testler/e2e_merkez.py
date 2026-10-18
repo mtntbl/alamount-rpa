@@ -180,6 +180,7 @@ for ad in anahtarlar:
 ajanlar = {ad: baslat(ad, d, "ajan") for ad, d in robot_dirs.items()}
 SONUC["iki robot çevrimiçi"] = bekle(lambda: len(db("SELECT * FROM robotlar WHERE durum IN ('bosta','mesgul')")) == 2,
                                      30, "robotlar nabız gönderdi")
+SONUC["robotlar Windows oturum durumunu bildirdi"] = all(r["oturum"] for r in db("SELECT oturum FROM robotlar"))
 
 # varlık
 post("/varliklar/kaydet", {"ad": "TEST_GIRIS", "tur": "kimlik", "kullanici_adi": "mikro_user",

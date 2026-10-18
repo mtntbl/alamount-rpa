@@ -132,7 +132,7 @@ class MerkezMCP:
             say = lambda sql, p=(): self.db.tek(sql, p)["n"]  # noqa: E731
             esik = self.m.cevrimdisi_esik()
             robotlar = [{"ad": r["ad"], "durum": self.m._robot_durum(r, esik), "calisan_is": r["calisan_is"],
-                         "son_gorulme": _zaman(r["son_gorulme"])}
+                         "windows_oturumu": r.get("oturum") or "bilinmiyor", "son_gorulme": _zaman(r["son_gorulme"])}
                         for r in self.db.sorgu("SELECT * FROM robotlar ORDER BY ad")]
             self._denetle(k, "durum_ozeti")
             return self._js({

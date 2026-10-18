@@ -11,6 +11,9 @@ Robot Framework görevleri ve çok robotlu çalışma için web tabanlı Kontrol
 |---|---|---|
 | Orkestrasyon | Robot Framework | Düzenlenebilir `.robot` görevleri, çalışma raporları (`log.html`) |
 | Masaüstü & tarayıcı | rpaframework | `RPA.Windows` (UI Automation), `RPA.Browser.Selenium`, `RPA.Excel`, `RPA.PDF` |
+| Citrix / RDP | opencv · Tesseract | Görüntü ve Türkçe yazı bularak tıklama/yazma; çok ölçekli eşleme, ekrandan şablon kesme aracı |
+| Bağlayıcılar | rpaframework · AlamountBaglayicilar | E-posta, Exchange/Outlook, SAP GUI, SQL Server/PostgreSQL/Oracle/MySQL, REST, Microsoft 365, Salesforce; e-Fatura (UBL-TR), TCMB kurları, MT940 ekstre ve mutabakat, VKN/TCKN/IBAN |
+| Gözetimsiz robot | Windows LSA · WTS | Oturumu robot açar (şifreli otomatik oturum açma), RDP kopunca konsola bağlar, kilitlenince yeniden açar |
 | Belge → görsel | pymupdf · Pillow · opencv | PDF sayfalarını görsele çevirir, kimlik kartını bulup düzelterek kırpar |
 | OCR | Tesseract (Türkçe) | Taranmış belgeleri internetsiz okur; Tesseract pakete gömülüdür |
 | Veri & çıktı | openpyxl | Puantaj ↔ TC eşleştirme, checklist kuralları, girişe hazır renk kodlu Excel |
