@@ -152,9 +152,9 @@ def kontrol(ayarlar):
     for mod in baglayicilar:
         try:
             __import__(mod)
-        except Exception:
-            eksik.append(mod)
-    satir(not eksik, f"Bağlayıcılar {len(baglayicilar) - len(eksik)}/{len(baglayicilar)}", ", ".join(eksik))
+        except Exception as e:
+            eksik.append(f"{mod} ({str(e)[:60]})")
+    satir(not eksik, f"Bağlayıcılar {len(baglayicilar) - len(eksik)}/{len(baglayicilar)}", "; ".join(eksik))
     try:
         import AlamountGoruntu  # noqa: F401
         import mss  # noqa: F401

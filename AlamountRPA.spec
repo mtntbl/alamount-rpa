@@ -35,6 +35,8 @@ RPA_MODULLERI = (
     # bağlayıcılar: e-posta, Outlook/Exchange, SAP GUI, veritabanı, REST, FTP, Azure, Microsoft 365, Salesforce, Word
     "RPA.Email", "RPA.Outlook", "RPA.SAP", "RPA.Database", "RPA.HTTP", "RPA.FTP", "RPA.Cloud.Azure", "RPA.MSGraph",
     "RPA.Salesforce", "RPA.JSON", "RPA.Archive", "RPA.Word", "RPA.Crypto", "RPA.Calendar", "RPA.Notifier",
+    # yukarıdakilerin içeriden kullandığı yardımcılar (Azure → Robocorp.Vault, Office → application)
+    "RPA.Robocorp", "RPA.MFA", "RPA.RobotLogListener", "RPA.application",
 )
 
 
@@ -66,7 +68,7 @@ hidden += guvenli(collect_submodules, "mcp", filter=lambda n: not n.startswith("
 hidden += guvenli(collect_submodules, "anthropic")
 # görüntü otomasyonu (ekran görüntüsü, fare/klavye) ve bağlayıcıların bağımlılıkları
 for paket in ("mss", "pynput", "RequestsLibrary", "exchangelib", "O365", "simple_salesforce", "pyodbc", "psycopg2",
-              "oracledb", "pymysql"):
+              "oracledb", "pymysql", "jsonpath_ng", "tenacity"):
     hidden += guvenli(collect_submodules, paket)
 for paket in ("uvicorn", "starlette", "anyio", "h11", "python_multipart", "multipart"):
     hidden += guvenli(collect_submodules, paket)
