@@ -322,6 +322,9 @@ class Merkez:
                  + '<div class="kart"><h2 style="margin-top:0">Kuyruklar</h2>' + self._kuyruk_ozet_tablosu(kuy) + "</div>")
         return HTMLResponse(P.sayfa("Pano", govde, k, "/", yenile=15, mesaj=self.mesaj(request)))
 
+    def cevrimdisi_esik(self):
+        return time.time() - self.ayarlar.getint("MERKEZ", "cevrimdisi_esik_sn")
+
     def _robot_durum(self, r, esik):
         if not r["aktif"]:
             return "pasif"
@@ -719,6 +722,74 @@ yonetici: robotlar, varlıklar, zamanlamalar, kullanıcılar</p></div>
         r.delete_cookie(COOKIE)
         return r
 
+    # ------------------------------------------------------------------ MCP / LLM bağlantısı
+    def _mcp_url(self, request):
+        kok = self.panel_url or f"{request.url.scheme}://{request.url.netloc}"
+        return kok.rstrip("/") + "/mcp"
+
+    async def mcp_baglanti(self, request, k, yeni_anahtar=None):
+        aktif = self.ayarlar.getbool("MCP", "aktif")
+        url = self._mcp_url(request)
+        govde = ""
+        if not aktif:
+            govde += ('<div class="uyari">MCP şu an <b>kapalı</b>. Açmak için merkez makinesindeki config.ini dosyasında '
+                      '<code>[MCP] aktif = evet</code> yapıp Kontrol Merkezi\'ni yeniden başlatın.</div>')
+        if yeni_anahtar:
+            govde += (f'<div class="uyari"><b>Yeni MCP anahtarınız</b> — yalnızca şimdi gösterilir, güvenli bir yere kaydedin:'
+                      f'<span class="anahtar">{P.e(yeni_anahtar)}</span>Bu anahtarla bağlanan LLM, '
+                      f'<b>{P.e(k["ad"])}</b> hesabının <b>{P.e(k["rol"])}</b> yetkileriyle çalışır.</div>')
+        kisisel = self.ayarlar.getbool("MCP", "kisisel_veri_paylas")
+        govde += f"""<div class="kart"><h2 style="margin-top:0">Bağlantı bilgileri</h2>
+<p>MCP adresi: <span class="anahtar">{P.e(url)}</span></p>
+<p class="soluk">Kimlik doğrulama: <code>Authorization: Bearer &lt;anahtar&gt;</code> ya da <code>X-API-Key: &lt;anahtar&gt;</code>.
+Kişisel veri paylaşımı: <b>{"açık" if kisisel else "kapalı (TC maskeli, ad soyad ve loglar gönderilmez)"}</b>.</p></div>"""
+        satirlar = [[P.e(a["ad"]), f'<code>{P.e(a["on_ek"])}…</code>', P.zaman(a["olusturma"]), P.zaman(a["son_kullanim"]),
+                     P.dugme_form(f"/mcp-baglanti/{a['id']}/iptal", "İptal et", k, "ikincil", "Anahtar iptal edilsin mi?")]
+                    for a in self.db.api_anahtarlari(k["id"])]
+        govde += ('<div class="kart"><h2 style="margin-top:0">MCP anahtarlarım</h2>'
+                  + P.tablo(["Ad", "Anahtar", "Oluşturma", "Son kullanım", ""], satirlar, "Henüz anahtar yok")
+                  + f"""<form class="satir" method="post" action="/mcp-baglanti/yeni" style="margin-top:12px">{P.csrf_alani(k)}
+<label>Anahtar adı (ör. Copilot, Claude Desktop)<input name="ad" required maxlength="60"></label><button>Anahtar oluştur</button></form></div>""")
+        exe = r"C:\\AlamountRPA\\AlamountRPA.exe"
+        govde += f"""<div class="kart"><h2 style="margin-top:0">Microsoft Copilot Studio</h2>
+<ol><li>Copilot Studio'da ajanınızı açın → <b>Araçlar (Tools)</b> → <b>Araç ekle</b> → <b>Model Context Protocol</b> → <b>Yeni</b>.</li>
+<li>Sunucu URL'si: <code>{P.e(url)}</code></li>
+<li>Kimlik doğrulama: <b>API anahtarı</b> → tür <b>Üst bilgi (Header)</b> → üst bilgi adı <code>X-API-Key</code>.</li>
+<li>Bağlantı oluştururken yukarıda aldığınız anahtarı girin.</li></ol>
+<p class="soluk">Copilot Studio bulutta çalışır: merkez adresinin internetten <b>HTTPS</b> ile erişilebilir olması gerekir
+(ör. kurumsal ters vekil sunucu / güvenlik duvarı kuralı). Microsoft 365 Copilot'ta bu ajan üzerinden kullanılır.</p></div>
+<div class="kart"><h2 style="margin-top:0">GitHub Copilot (VS Code)</h2>
+<p>Çalışma alanında <code>.vscode/mcp.json</code>:</p>
+<pre>{P.e(json.dumps({"inputs": [{"type": "promptString", "id": "alamount-anahtar", "description": "Alamount RPA MCP anahtarı", "password": True}],
+                 "servers": {"alamount-rpa": {"type": "http", "url": url,
+                                              "headers": {"Authorization": "Bearer ${input:alamount-anahtar}"}}}},
+                ensure_ascii=False, indent=2))}</pre></div>
+<div class="kart"><h2 style="margin-top:0">Claude Desktop</h2>
+<p><code>%APPDATA%\\Claude\\claude_desktop_config.json</code> dosyasına ekleyin (Alamount RPA o bilgisayarda kurulu olmalı;
+aşağıdaki komut yerel bir köprü açıp merkeze bağlanır):</p>
+<pre>{P.e(json.dumps({"mcpServers": {"alamount-rpa": {"command": exe.replace(chr(92) * 2, chr(92)),
+                                                    "args": ["mcp", "--merkez", url],
+                                                    "env": {"ALAMOUNT_MCP_ANAHTARI": "alm_..."}}}},
+                ensure_ascii=False, indent=2))}</pre>
+<p class="soluk">Claude Desktop'u yeniden başlatın; araçlar "alamount-rpa" adıyla görünür.</p></div>
+<div class="kart"><h2 style="margin-top:0">LLM'in yapabildikleri</h2>
+<p>durum_ozeti, surecleri_listele, isleri_listele, is_detayi, kuyruk_ogeleri, zamanlamalari_listele (herkes) ·
+is_baslat, is_iptal_et, ogeyi_yeniden_isle, zamanlama_durdur_baslat (operator) · zamanlama_ekle (yonetici).
+Varlık kasası ve kullanıcı yönetimi MCP'den erişilemez. Her çağrı Denetim kaydına "(MCP)" ile yazılır.</p></div>"""
+        return HTMLResponse(P.sayfa("MCP / LLM bağlantısı", govde, k, "/mcp-baglanti", mesaj=self.mesaj(request)))
+
+    async def mcp_anahtar_yeni(self, request, k):
+        f = await self.form(request, k)
+        anahtar = self.db.api_anahtari_olustur(k["id"], str(f.get("ad", "")))
+        self.db.denetle(k["ad"], "mcp_anahtar_olustur", str(f.get("ad", ""))[:60])
+        return await self.mcp_baglanti(request, k, anahtar)
+
+    async def mcp_anahtar_iptal(self, request, k):
+        await self.form(request, k)
+        self.db.api_anahtari_iptal(request.path_params["id"], k["id"])
+        self.db.denetle(k["ad"], "mcp_anahtar_iptal", str(request.path_params["id"]))
+        return self.yonlendir("/mcp-baglanti", "Anahtar iptal edildi")
+
     async def denetim(self, request, k):
         satirlar = [[P.zaman(d["zaman"]), P.e(d["kim"]), P.e(d["eylem"]), P.e(d["detay"])]
                     for d in self.db.sorgu("SELECT * FROM denetim ORDER BY id DESC LIMIT 500")]
@@ -799,8 +870,26 @@ yonetici: robotlar, varlıklar, zamanlamalar, kullanıcılar</p></div>
             R("/kullanicilar/parola", pnl()(self.parola), methods=["POST"]),
             R("/kullanicilar/{id:int}/degistir", pnl("yonetici")(self.kullanici_degistir), methods=["POST"]),
             R("/denetim", pnl("yonetici")(self.denetim)),
+            R("/mcp-baglanti", pnl()(self.mcp_baglanti)),
+            R("/mcp-baglanti/yeni", pnl()(self.mcp_anahtar_yeni), methods=["POST"]),
+            R("/mcp-baglanti/{id:int}/iptal", pnl()(self.mcp_anahtar_iptal), methods=["POST"]),
         ]
-        return GuvenlikBasliklari(Starlette(routes=rotalar))
+        panel = GuvenlikBasliklari(Starlette(routes=rotalar))
+        if not self.ayarlar.getbool("MCP", "aktif"):
+            return panel
+        import merkez_mcp
+
+        mcp_uygulama = merkez_mcp.MerkezMCP(self)
+
+        async def yonlendirici(scope, receive, send):
+            """'/mcp' → MCP sunucusu (yaşam döngüsü dahil), diğer her şey → panel."""
+            if scope["type"] == "lifespan" or (scope["type"] == "http" and scope["path"].rstrip("/") == "/mcp"):
+                return await mcp_uygulama(scope, receive, send)
+            return await panel(scope, receive, send)
+
+        log.info("MCP uç noktası etkin: /mcp (kişisel veri paylaşımı: %s)",
+                 "açık" if self.ayarlar.getbool("MCP", "kisisel_veri_paylas") else "kapalı")
+        return yonlendirici
 
     def calistir(self):
         import uvicorn
@@ -865,3 +954,14 @@ def is_olustur(ayarlar, surec, robot="", degiskenler=(), max_deneme=1, bekle_dk=
         time.sleep(2)
     print(f"İş #{is_id}: {bekle_dk} dk içinde bitmedi")
     return 2
+
+
+def mcp_anahtari_olustur(ayarlar, kullanici, ad="komut satırı"):
+    """Komut satırından bir kullanıcıya MCP anahtarı üretir (panel kullanılamıyorsa / betikle kurulum)."""
+    db = Veritabani(ayarlar.yol("MERKEZ", "veri_klasoru", olustur=True))
+    k = db.tek("SELECT id FROM kullanicilar WHERE ad=? AND aktif=1", (kullanici,))
+    if not k:
+        raise SystemExit(f"Kullanıcı bulunamadı ya da pasif: {kullanici}")
+    anahtar = db.api_anahtari_olustur(k["id"], ad)
+    db.denetle("komut_satiri", "mcp_anahtar_olustur", kullanici)
+    return anahtar

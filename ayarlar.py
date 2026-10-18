@@ -103,6 +103,14 @@ eposta_alicilar =
 ; (URL'yi varlık olarak saklamak için: teams_webhook = varlik:TEAMS_WEBHOOK)
 teams_webhook =
 
+[MCP]
+; LLM entegrasyonu (Microsoft Copilot, Claude Desktop vb.): merkez üzerinde /mcp uç noktası.
+; Kullanıcılar panelde "MCP / LLM" sayfasından kendi anahtarlarını alır; LLM o kullanıcının rolüyle çalışır.
+aktif = hayir
+; Kişisel veriler (ad soyad, TC, iş logları) LLM'e gönderilsin mi? hayir: TC maskelenir, ad ve loglar gönderilmez.
+; DİKKAT: LLM bulut tabanlıysa gönderilen her şey sağlayıcının sunucularına gider (KVKK).
+kisisel_veri_paylas = hayir
+
 ; =====================================================================
 ;  ROBOT AJANI (robot makinelerinde: AlamountRPA.exe ajan)
 ; =====================================================================

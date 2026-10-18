@@ -59,6 +59,10 @@ CREATE TABLE IF NOT EXISTS varliklar (
     id INTEGER PRIMARY KEY, ad TEXT UNIQUE NOT NULL, tur TEXT NOT NULL DEFAULT 'metin',
     kullanici_adi TEXT DEFAULT '', deger_sifreli TEXT NOT NULL, aciklama TEXT DEFAULT '', guncelleme REAL
 );
+CREATE TABLE IF NOT EXISTS api_anahtarlari (
+    id INTEGER PRIMARY KEY, kullanici_id INTEGER NOT NULL, ad TEXT NOT NULL, anahtar_hash TEXT UNIQUE NOT NULL,
+    on_ek TEXT NOT NULL, olusturma REAL NOT NULL, son_kullanim REAL, aktif INTEGER NOT NULL DEFAULT 1
+);
 CREATE TABLE IF NOT EXISTS denetim (
     id INTEGER PRIMARY KEY, zaman REAL NOT NULL, kim TEXT, eylem TEXT, detay TEXT
 );
@@ -201,6 +205,38 @@ class Veritabani:
 
     def cikis(self, token):
         self.yaz("DELETE FROM oturumlar WHERE token=?", (token,))
+
+    # ------------------------------------------------------------------ MCP / API anahtarları
+    def api_anahtari_olustur(self, kullanici_id, ad):
+        """Kullanıcıya bağlı MCP anahtarı üretir; anahtarın kendisi yalnızca bir kez döner."""
+        anahtar = "alm_" + secrets.token_urlsafe(32)
+        self.yaz("""INSERT INTO api_anahtarlari(kullanici_id, ad, anahtar_hash, on_ek, olusturma)
+                    VALUES(?,?,?,?,?)""", (kullanici_id, ad.strip()[:60] or "MCP", anahtar_hashle(anahtar),
+                                           anahtar[:8], simdi()))
+        return anahtar
+
+    def api_anahtari_dogrula(self, anahtar):
+        """Geçerli anahtarın sahibini (id, ad, rol) döner; değilse None."""
+        if not anahtar or not anahtar.startswith("alm_"):
+            return None
+        k = self.tek("""SELECT k.id, k.ad, k.rol, a.id anahtar_id FROM api_anahtarlari a
+                        JOIN kullanicilar k ON k.id=a.kullanici_id
+                        WHERE a.anahtar_hash=? AND a.aktif=1 AND k.aktif=1""", (anahtar_hashle(anahtar),))
+        if k:
+            self.yaz("UPDATE api_anahtarlari SET son_kullanim=? WHERE id=?", (simdi(), k["anahtar_id"]))
+        return k
+
+    def api_anahtarlari(self, kullanici_id=None):
+        sql = """SELECT a.*, k.ad kullanici FROM api_anahtarlari a JOIN kullanicilar k ON k.id=a.kullanici_id
+                 WHERE a.aktif=1"""
+        if kullanici_id is not None:
+            return self.sorgu(sql + " AND a.kullanici_id=? ORDER BY a.id DESC", (kullanici_id,))
+        return self.sorgu(sql + " ORDER BY a.id DESC")
+
+    def api_anahtari_iptal(self, anahtar_id, kullanici_id=None):
+        if kullanici_id is None:
+            return self.yaz("UPDATE api_anahtarlari SET aktif=0 WHERE id=?", (anahtar_id,))
+        return self.yaz("UPDATE api_anahtarlari SET aktif=0 WHERE id=? AND kullanici_id=?", (anahtar_id, kullanici_id))
 
     # ------------------------------------------------------------------ robotlar
     def robot_ekle(self, ad, aciklama=""):

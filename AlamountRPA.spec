@@ -46,7 +46,7 @@ def guvenli(fn, *a, **k):
 hidden = [
     "pca_analiz", "ayarlar", "belge_ocr", "ise_giris", "llm_katmani", "mcp_sunucu", "AlamountRPA",
     "ajan", "merkez_sunucu", "merkez_db", "merkez_panel", "merkez_istemci", "bildirim", "cron", "surecler",
-    "kuyruk_isleri", "marka",
+    "kuyruk_isleri", "marka", "merkez_mcp", "mcp_kopru",
     "robot.libraries.BuiltIn", "robot.libraries.OperatingSystem", "robot.libraries.Collections",
     "robot.libraries.Process", "robot.libraries.String", "robot.libraries.DateTime",
     "robot.libraries.Screenshot", "robot.libraries.XML",
