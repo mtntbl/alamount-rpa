@@ -142,12 +142,13 @@ jobs:
           net user ci_robot $p /add | Out-Null
           if ($LASTEXITCODE -ne 0) { throw "Test kullanıcısı oluşturulamadı" }
           function Durum { $o = (& .\AlamountRPA.exe oturum-durum) -join "`n"; $o; return $o }
-          # yanlış parola: hiçbir şey kurulmamalı
+          # yanlış parola: hiçbir şey değişmemeli (runner imajında zaten runneradmin için autologon açık olabilir)
+          $wlYol = "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon"
+          $once = Get-ItemProperty $wlYol
           $y = (& .\AlamountRPA.exe oturum-kur --kullanici .\ci_robot --parola yanlis-parola) -join "`n"
           if ($LASTEXITCODE -eq 0 -or $y -notmatch 'parola yanlış') { throw "Yanlış parola reddedilmedi: $y" }
-          if (Test-Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon") {
-            if ((Get-ItemProperty "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon").AutoAdminLogon -eq "1") { throw "Yanlış parolayla autologon açıldı" }
-          }
+          $sonra = Get-ItemProperty $wlYol
+          if ($sonra.DefaultUserName -ne $once.DefaultUserName -or $sonra.AutoAdminLogon -ne $once.AutoAdminLogon) { throw "Yanlış parolayla Winlogon değişti" }
           & .\AlamountRPA.exe oturum-kur --kullanici .\ci_robot --parola $p
           if ($LASTEXITCODE -ne 0) { throw "oturum-kur başarısız" }
           $wl = Get-ItemProperty "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon"
