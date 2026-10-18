@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Örnek Personel Formu</title>
+<style>
+  body { font-family: Segoe UI, Arial, sans-serif; background: #f4f6f8; margin: 0; padding: 32px; }
+  form { background: #fff; max-width: 480px; margin: auto; padding: 24px; border-radius: 8px; box-shadow: 0 1px 4px #0002; }
+  h1 { font-size: 20px; margin-top: 0; }
+  label { display: block; margin: 12px 0 4px; font-size: 13px; color: #444; }
+  input, select { width: 100%; padding: 8px; box-sizing: border-box; border: 1px solid #bbb; border-radius: 4px; }
+  button { margin-top: 18px; padding: 10px 18px; background: #1f4e78; color: #fff; border: 0; border-radius: 4px; }
+  #sonuc { margin-top: 14px; font-weight: 600; color: #1d7a3a; }
+</style>
+</head>
+<body>
+<form id="form" onsubmit="event.preventDefault(); document.getElementById('sonuc').textContent = 'Kaydedildi: ' + document.getElementById('tc').value;">
+  <h1>Örnek Personel Formu (test)</h1>
+  <label for="tc">T.C. Kimlik No</label><input id="tc" maxlength="11">
+  <label for="giris">İşe Giriş Tarihi</label><input id="giris">
+  <label for="telefon">Cep Telefonu</label><input id="telefon">
+  <label for="dogum">Doğum Tarihi</label><input id="dogum">
+  <label for="cinsiyet">Cinsiyet</label>
+  <select id="cinsiyet"><option></option><option>Erkek</option><option>Kadın</option></select>
+  <button id="gonder" type="submit">Kaydet</button>
+  <div id="sonuc"></div>
+</form>
+</body>
+</html>

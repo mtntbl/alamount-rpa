@@ -1,0 +1,24 @@
+# Python / derleme
+__pycache__/
+*.pyc
+.venv/
+build/
+dist/
+paket/
+*.zip
+
+# Çalışma klasörleri (robot çalışınca oluşur)
+input/
+output/
+archive/
+error/
+logs/
+
+# Kontrol Merkezi verisi: veritabanı ve KASA ANAHTARI — asla commit etmeyin
+merkez_veri/
+*.key
+
+# CI duman testi klasörleri
+smoke/
+merkez/
+robot1/
