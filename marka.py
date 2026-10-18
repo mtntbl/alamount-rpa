@@ -6,7 +6,7 @@ import sys
 
 URUN = "Alamount RPA"
 SIRKET = "Alamount"
-SURUM = "3.1.0"
+SURUM = "3.2.0"
 EXE = "AlamountRPA.exe"
 
 LACIVERT = "#022351"  # logodaki "Alamount"

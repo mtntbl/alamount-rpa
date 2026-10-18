@@ -2,7 +2,11 @@ name: Build Alamount RPA (Windows)
 
 on:
   push:
-    branches: [main]
+    branches: [main, "claude/**"]
+    paths-ignore:
+      - "**.md"
+      - "docs/**"
+  pull_request:
     paths-ignore:
       - "**.md"
       - "docs/**"
@@ -110,7 +114,9 @@ jobs:
           Expand-Archive AlamountRPA_Windows.zip -DestinationPath robot1 -Force
           $m = (Resolve-Path merkez\config.ini).Path
           $r = (Resolve-Path robot1\config.ini).Path
-          (Get-Content $m) -replace '^port = .*', 'port = 18765' | Set-Content -Encoding utf8 $m
+          $c = (Get-Content $m -Raw) -replace '(?m)^port = .*', 'port = 18765'
+          $c = $c -replace '(\[MCP\][^\[]*?)aktif = hayir', '$1aktif = evet'
+          Set-Content -Encoding utf8 $m $c
           $sifre = ((& merkez\AlamountRPA.exe --config $m merkez-parola admin) -split ': ')[-1].Trim()
           $srv = Start-Process merkez\AlamountRPA.exe -ArgumentList "--config", "`"$m`"", "merkez" -PassThru `
                    -WorkingDirectory merkez -RedirectStandardOutput merkez.out -RedirectStandardError merkez.err
@@ -144,6 +150,23 @@ jobs:
             if (([regex]::Matches($k.Content, 'r-basarili')).Count -lt 2) { throw "Kuyruk öğeleri başarılı değil" }
             $isler = Invoke-WebRequest http://127.0.0.1:18765/isler -WebSession $s
             "Panelde $(([regex]::Matches($isler.Content, 'r-basarili')).Count) başarılı iş"
+            # MCP — Copilot Studio yolu (X-API-Key, streamable HTTP)
+            $mk = (& merkez\AlamountRPA.exe --config $m merkez-mcp-anahtar admin).Trim()
+            $h = @{ "X-API-Key" = $mk; "Accept" = "application/json, text/event-stream" }
+            $ini = @{ jsonrpc = "2.0"; id = 1; method = "initialize"; params = @{ protocolVersion = "2025-06-18"; capabilities = @{}; clientInfo = @{ name = "ci"; version = "1" } } } | ConvertTo-Json -Depth 5
+            $r = Invoke-RestMethod http://127.0.0.1:18765/mcp -Method Post -Headers $h -ContentType "application/json" -Body $ini
+            if ($r.result.serverInfo.name -ne "alamount-rpa") { throw "MCP initialize başarısız" }
+            $h["MCP-Protocol-Version"] = "2025-06-18"
+            $tl = Invoke-RestMethod http://127.0.0.1:18765/mcp -Method Post -Headers $h -ContentType "application/json" -Body '{"jsonrpc":"2.0","id":2,"method":"tools/list"}'
+            if ($tl.result.tools.Count -ne 11) { throw "MCP araç sayısı hatalı: $($tl.result.tools.Count)" }
+            $dz = Invoke-RestMethod http://127.0.0.1:18765/mcp -Method Post -Headers $h -ContentType "application/json" -Body '{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"durum_ozeti","arguments":{}}}'
+            if ($dz.result.content[0].text -notmatch 'CI-ROBOT') { throw "MCP durum_ozeti başarısız" }
+            "MCP (HTTP): initialize + $($tl.result.tools.Count) araç + durum_ozeti OK"
+            # MCP — Claude Desktop yolu (stdio köprüsü)
+            $env:ALAMOUNT_MCP_ANAHTARI = $mk
+            $k = '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"ci","version":"1"}}}' | & robot1\AlamountRPA.exe mcp --merkez http://127.0.0.1:18765/mcp
+            if (($k -join "") -notmatch '"alamount-rpa"') { throw "MCP köprüsü başarısız: $k" }
+            "MCP (stdio köprüsü): initialize OK"
           } finally {
             Stop-Process -Id $ajan.Id -Force -ErrorAction SilentlyContinue
             Stop-Process -Id $srv.Id -Force -ErrorAction SilentlyContinue
@@ -162,10 +185,11 @@ jobs:
           if-no-files-found: ignore
 
       - name: Publish release
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v3.1.0-build${{ github.run_number }}
-          name: Alamount RPA v3.1.0 (build ${{ github.run_number }})
+          tag_name: v3.2.0-build${{ github.run_number }}
+          name: Alamount RPA v3.2.0 (build ${{ github.run_number }})
           target_commitish: ${{ github.sha }}
           files: AlamountRPA_Windows.zip
           body: |

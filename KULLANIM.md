@@ -140,7 +140,7 @@ Her çalıştırmanın raporu `logs\robot\<görev>_<tarih>\log.html` dosyasında
 | `ornek_tarayici` | RPA.Browser örneği: web formunu doldur, ekran görüntüsü al |
 | `pca_analizi` | PCA analizi |
 
-## 5) Ajan katmanı (opsiyonel, ücretli)
+## 5) Ajan katmanı ve LLM entegrasyonu (opsiyonel)
 
 **a) OCR'ın okuyamadığı alanlar için Claude (`[LLM]`)**
 - `aktif = evet` yapın ve API anahtarını `ANTHROPIC_API_KEY` ortam değişkenine yazın.
@@ -150,14 +150,39 @@ Her çalıştırmanın raporu `logs\robot\<görev>_<tarih>\log.html` dosyasında
   Claude kuralın bulduğu değerden farklı bir şey okursa alan **HR ONAYI GEREKLİ** olarak işaretlenir.
 - ⚠️ **KVKK:** Bu ayar açılınca kimlik görüntüsü ve kişisel veriler Anthropic API'sine gider. Kurum onayı olmadan açmayın.
 
-**b) MCP sunucusu (Claude Desktop ile robotu yönetme)**
-`%APPDATA%\Claude\claude_desktop_config.json` dosyasına şunu ekleyin:
-```json
-{ "mcpServers": { "alamount-rpa": { "command": "C:\\AlamountRPA\\AlamountRPA.exe", "args": ["mcp"] } } }
-```
-Claude'un kullanabileceği araçlar: `ocr_pdf`, `belge_analizi`, `ise_giris_hazirla`, `ise_giris_klasorunu_isle`,
-`pca_analizi`, `gorev_listesi`, `robot_gorevi_calistir` (Mikro görevleri varsayılan olarak kuru çalışır).
-Araç sonuçları (OCR metni dahil) Claude'a gider; KVKK uyarısı burada da geçerlidir.
+**b) LLM ile yönetim — MCP (Microsoft Copilot, Claude Desktop)**
+
+Kontrol Merkezi, standart bir MCP uç noktası (`https://SUNUCU:8765/mcp`) sunar. Bir LLM bu uç nokta üzerinden,
+**bağlanan kullanıcının rolüyle**, durum sorgular, iş başlatır, kuyruğu ve zamanlamaları yönetir.
+
+1. Merkez makinesindeki `config.ini` dosyasında `[MCP] aktif = evet` yapın ve merkezi yeniden başlatın.
+2. Her kullanıcı panelde **MCP / LLM** sayfasından kendi anahtarını oluşturur. Anahtar `alm_…` ile başlar ve yalnızca bir kez gösterilir.
+   Betikle oluşturmak için: `AlamountRPA.exe merkez-mcp-anahtar ayse`.
+3. İstemciyi bağlayın (MCP / LLM sayfasında URL'si doldurulmuş hazır örnekler vardır):
+
+| İstemci | Bağlantı |
+|---|---|
+| **Microsoft Copilot Studio** (Microsoft 365 Copilot ajanları) | Araçlar → Model Context Protocol → URL `…/mcp`, kimlik doğrulama **API anahtarı**, üst bilgi adı `X-API-Key`. Merkezin internetten **HTTPS** ile erişilebilir olması gerekir. |
+| **GitHub Copilot** (VS Code) | `.vscode/mcp.json` içinde `"type": "http"`, `url` ve `Authorization: Bearer <anahtar>` üst bilgisi |
+| **Claude Desktop** | `claude_desktop_config.json`: `"command": "C:\\AlamountRPA\\AlamountRPA.exe"`, `"args": ["mcp", "--merkez", "https://SUNUCU:8765/mcp"]`, `"env": {"ALAMOUNT_MCP_ANAHTARI": "alm_…"}`. Yerel bir köprü merkeze bağlanır. |
+
+LLM'in kullanabileceği araçlar:
+
+| Araç | Rol |
+|---|---|
+| `durum_ozeti`, `surecleri_listele`, `isleri_listele`, `is_detayi`, `kuyruk_ogeleri`, `zamanlamalari_listele` | izleyici |
+| `is_baslat`, `is_iptal_et`, `ogeyi_yeniden_isle`, `zamanlama_durdur_baslat` | operator |
+| `zamanlama_ekle` | yonetici |
+
+- Varlık kasası (parolalar) ve kullanıcı yönetimi MCP'den **erişilemez**.
+- Her çağrı, reddedilenler dahil, **Denetim** sayfasına "ad (MCP)" olarak yazılır.
+- ⚠️ **KVKK:** `[MCP] kisisel_veri_paylas = hayir` (varsayılan) iken TC numaraları maskelenir, ad soyad ve iş logları LLM'e gönderilmez.
+  Bulut tabanlı bir LLM kullanıldığında gönderilen her şey sağlayıcının sunucularına gider.
+
+**c) Yerel MCP (tek bilgisayar, merkez olmadan)**
+`"args": ["mcp"]` (`--merkez` olmadan) yalnızca o bilgisayardaki araçları açar: `ocr_pdf`, `belge_analizi`,
+`ise_giris_hazirla`, `ise_giris_klasorunu_isle`, `pca_analizi`, `gorev_listesi`, `robot_gorevi_calistir`.
+Bu modda OCR metni de LLM'e gider.
 
 ## 6) Kontrol Merkezi ve robot ajanları (çok makineli çalışma)
 

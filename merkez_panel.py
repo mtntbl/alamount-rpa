@@ -76,7 +76,7 @@ MENU = [
     ("/", "Pano", "izleyici"), ("/isler", "İşler", "izleyici"), ("/kuyruklar", "Kuyruklar", "izleyici"),
     ("/zamanlamalar", "Zamanlamalar", "izleyici"), ("/robotlar", "Robotlar", "izleyici"),
     ("/varliklar", "Varlıklar", "yonetici"), ("/kullanicilar", "Kullanıcılar", "yonetici"),
-    ("/denetim", "Denetim", "yonetici"),
+    ("/denetim", "Denetim", "yonetici"), ("/mcp-baglanti", "MCP / LLM", "izleyici"),
 ]
 ROL_SIRA = {"izleyici": 0, "operator": 1, "yonetici": 2}
 DURUM_ADI = {

@@ -10,9 +10,11 @@ Alamount RPA — tek giriş noktası (AlamountRPA.exe)
   AlamountRPA.exe robot <görev> [robot seçenekleri]   (ör. robot mikro_personel_giris --variable KURU_CALISMA:hayir)
   AlamountRPA.exe gorevler                görev listesini yazar
   AlamountRPA.exe kontrol                 kurulum kontrolü (Tesseract, dil paketleri, kütüphaneler)
-  AlamountRPA.exe mcp                     MCP sunucusu (Claude Desktop vb. için)
+  AlamountRPA.exe mcp                     yerel MCP sunucusu (bu bilgisayardaki araçlar)
+  AlamountRPA.exe mcp --merkez URL        Claude Desktop ↔ Kontrol Merkezi köprüsü (ALAMOUNT_MCP_ANAHTARI)
   AlamountRPA.exe merkez                  Kontrol Merkezi (web paneli + robot API'si)
   AlamountRPA.exe merkez-parola admin     panel kullanıcısının parolasını sıfırlar
+  AlamountRPA.exe merkez-mcp-anahtar ayse  kullanıcıya MCP anahtarı üretir (merkez makinesinde)
   AlamountRPA.exe merkez-robot ROBOT-1    robot ekler / anahtarını yeniler (merkez makinesinde)
   AlamountRPA.exe merkez-is pca [--robot R] [--degisken AD:deger] [--bekle 30]   iş başlatır
   AlamountRPA.exe ajan                    robot ajanı (merkezden iş alır)
@@ -233,10 +235,16 @@ def main(argv=None):
     p.add_argument("gorev")
     alt.add_parser("gorevler")
     alt.add_parser("kontrol")
-    alt.add_parser("mcp")
+    p = alt.add_parser("mcp", help="MCP sunucusu (yerel) ya da --merkez ile Kontrol Merkezi köprüsü")
+    p.add_argument("--merkez", help="Kontrol Merkezi MCP adresi, ör. https://rpa-sunucu:8765/mcp (Claude Desktop köprüsü)")
+    p.add_argument("--anahtar", help="MCP anahtarı (önerilen: ALAMOUNT_MCP_ANAHTARI ortam değişkeni)")
+    p.add_argument("--ca-dosyasi", default="", help="Kendinden imzalı sertifika için CA dosyası")
     alt.add_parser("merkez")
     p = alt.add_parser("merkez-parola")
     p.add_argument("kullanici")
+    p = alt.add_parser("merkez-mcp-anahtar")
+    p.add_argument("kullanici")
+    p.add_argument("--ad", default="komut satırı")
     p = alt.add_parser("merkez-robot")
     p.add_argument("robot")
     p = alt.add_parser("merkez-is")
@@ -261,6 +269,11 @@ def main(argv=None):
 
     if args.komut is None:
         return menu(args.config)
+    if args.komut == "mcp" and args.merkez:  # Claude Desktop köprüsü: config.ini gerekmez, stdout protokole ait
+        import mcp_kopru
+
+        return mcp_kopru.calistir(args.merkez, args.anahtar or os.environ.get("ALAMOUNT_MCP_ANAHTARI", ""),
+                                  args.ca_dosyasi)
     _konsol_basligi({"merkez": "Kontrol Merkezi", "ajan": "Robot Ajanı"}.get(args.komut, args.komut))
     if args.komut == "init":
         init(args.config)
@@ -289,6 +302,11 @@ def main(argv=None):
         import merkez_sunucu
 
         print(f"{args.kullanici} için yeni parola: {merkez_sunucu.sifre_sifirla(ayarlar, args.kullanici)}")
+        return 0
+    if args.komut == "merkez-mcp-anahtar":
+        import merkez_sunucu
+
+        print(merkez_sunucu.mcp_anahtari_olustur(ayarlar, args.kullanici, args.ad))
         return 0
     if args.komut == "merkez-robot":
         import merkez_sunucu
