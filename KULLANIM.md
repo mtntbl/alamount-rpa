@@ -212,7 +212,6 @@ Genel bağlayıcılar pakette hazır gelir; `.robot` görevinde `Library` satır
 | `RPA.HTTP` | REST/HTTP servisleri, dosya indirme |
 | `RPA.FTP` | FTP / FTPS |
 | `RPA.MSGraph` | Microsoft 365: OneDrive, SharePoint, Outlook (Graph API) |
-| `RPA.Cloud.Azure` | Azure servisleri (Document Intelligence, Key Vault…) |
 | `RPA.Salesforce` | Salesforce kayıtları |
 | `RPA.Word.Application` / `RPA.Excel.Application` | Masaüstü Word ve Excel (makro, formül, yazdırma) |
 | `RPA.Archive` / `RPA.JSON` / `RPA.Crypto` | ZIP, JSON, şifreleme |

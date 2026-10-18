@@ -7,7 +7,7 @@ Türkiye'ye özel bağlayıcılar — .robot görevlerinde:   Library    Alamoun
   * Banka ekstresi (MT940) okuma, Excel'e aktarma, faturalarla eşleştirme (mutabakat)
   * VKN, TCKN ve IBAN doğrulama
 
-Genel bağlayıcılar (e-posta, Exchange/Outlook, veritabanı, SAP GUI, REST, FTP/SFTP, Azure, Microsoft 365,
+Genel bağlayıcılar (e-posta, Exchange/Outlook, veritabanı, SAP GUI, REST, FTP, Microsoft 365,
 Salesforce) pakette hazır gelen RPA.* kütüphaneleridir; bkz. KULLANIM.md "Bağlayıcılar".
 """
 

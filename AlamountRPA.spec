@@ -32,10 +32,11 @@ with open(SURUM_DOSYASI, "w", encoding="utf-8") as f:
 RPA_MODULLERI = (
     "RPA.Windows", "RPA.Desktop", "RPA.Browser.Selenium", "RPA.Browser.common", "RPA.Excel",
     "RPA.FileSystem", "RPA.PDF", "RPA.Tables", "RPA.core",
-    # bağlayıcılar: e-posta, Outlook/Exchange, SAP GUI, veritabanı, REST, FTP, Azure, Microsoft 365, Salesforce, Word
-    "RPA.Email", "RPA.Outlook", "RPA.SAP", "RPA.Database", "RPA.HTTP", "RPA.FTP", "RPA.Cloud.Azure", "RPA.MSGraph",
+    # bağlayıcılar: e-posta, Outlook/Exchange, SAP GUI, veritabanı, REST, FTP, Microsoft 365, Salesforce, Word
+    # (RPA.Cloud.* ad alanı paketidir, PyInstaller paketleyemez; Azure servisleri RPA.HTTP ile çağrılır)
+    "RPA.Email", "RPA.Outlook", "RPA.SAP", "RPA.Database", "RPA.HTTP", "RPA.FTP", "RPA.MSGraph",
     "RPA.Salesforce", "RPA.JSON", "RPA.Archive", "RPA.Word", "RPA.Crypto", "RPA.Calendar", "RPA.Notifier",
-    # yukarıdakilerin içeriden kullandığı yardımcılar (Azure → Robocorp.Vault, Office → application)
+    # yukarıdakilerin içeriden kullandığı yardımcılar (Office → application, Vault)
     "RPA.Robocorp", "RPA.MFA", "RPA.RobotLogListener", "RPA.application",
 )
 

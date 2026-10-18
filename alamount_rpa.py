@@ -147,7 +147,7 @@ def kontrol(ayarlar):
         except Exception as e:
             satir(False, ad, str(e)[:80])
     baglayicilar = ("RPA.Email.ImapSmtp", "RPA.Email.Exchange", "RPA.Outlook.Application", "RPA.SAP", "RPA.Database",
-                    "RPA.HTTP", "RPA.FTP", "RPA.Cloud.Azure", "RPA.MSGraph", "RPA.Salesforce", "AlamountBaglayicilar")
+                    "RPA.HTTP", "RPA.FTP", "RPA.MSGraph", "RPA.Salesforce", "AlamountBaglayicilar")
     eksik = []
     for mod in baglayicilar:
         try:
